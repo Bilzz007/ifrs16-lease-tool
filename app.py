@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
 def calculate_lease_liability(payment, rate, n_periods):
@@ -15,7 +15,6 @@ def generate_daily_depreciation_schedule(start_date, term_months, rou_asset):
     total_days = (end_date - start_date).days
     daily_depreciation = rou_asset / total_days
     schedule = []
-
     cumulative_depr = 0
     for i in range(term_months):
         month_start = start_date + relativedelta(months=i)
@@ -33,7 +32,6 @@ def generate_amortization_schedule(start_date, payment, rate, term_months, rou_a
     schedule = []
     liability = calculate_lease_liability(payment, rate, term_months)
     r = rate / 12
-
     depr_schedule = generate_daily_depreciation_schedule(start_date, term_months, rou_asset)
     for i in range(term_months):
         interest = round(liability * r, 2)
@@ -103,24 +101,20 @@ if st.sidebar.button("Generate Lease Model"):
         liability = calculate_lease_liability(payment, discount_rate / 100, term_months)
         rou_asset = calculate_right_of_use_asset(liability, direct_costs, incentives)
 
-        st.markdown(
-            f"""<b>Initial Lease Liability:</b> ${liability:,.0f}<br>
-<b>Initial Right-of-use Asset:</b> ${rou_asset:,.0f}""",
-            unsafe_allow_html=True
-        )
+        st.subheader("📘 Summary")
+        st.markdown(f"""
+- **Lease:** {lease_name}  
+- **Entity:** {entity}  
+- **Location:** {location}  
+- **Asset Class:** {asset_class}  
+- **Start Date:** {start_date.strftime('%Y-%m-%d')}  
+- **Term:** {term_months} months  
+- **Discount Rate:** {discount_rate}%  
+- **CPI Adjustment:** {cpi}% annually  
+- **Initial Lease Liability:** ${liability:,.0f}  
+- **Initial Right-of-use Asset:** ${rou_asset:,.0f}
+""")
 
         st.subheader("📄 Amortization Schedule (Daily Depreciation)")
         schedule_df, _ = generate_amortization_schedule(start_date, payment, discount_rate / 100, term_months, rou_asset)
         st.dataframe(schedule_df)
-
-        st.subheader("📘 Summary")
-        st.markdown(f"""
-        - **Lease:** {lease_name}  
-        - **Entity:** {entity}  
-        - **Location:** {location}  
-        - **Asset Class:** {asset_class}  
-        - **Start Date:** {start_date.strftime('%Y-%m-%d')}  
-        - **Term:** {term_months} months  
-        - **Discount Rate:** {discount_rate}%  
-        - **CPI Adjustment:** {cpi}% annually
-        """)
