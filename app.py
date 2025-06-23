@@ -54,19 +54,13 @@ def generate_amortization_schedule(start_date, payment, rate, term_months, rou_a
 st.set_page_config(page_title="IFRS 16 - Leases", layout="wide")
 st.title("📘 IFRS 16 – Leases")
 
-st.info("""👋 **Welcome to the IFRS 16 – Leases Model Tool!**
+st.info(
+    "👋 **Welcome to the IFRS 16 – Leases Model Tool!**\n\n"
+    "Use the panel on the **left sidebar** to enter your lease details (like asset class, term, payments, discount rate, etc.).\n\n"
+    "Then, click the **'Generate Lease Model'** button to view amortization schedules, journal entries, and summaries.\n\n"
+    "📘 [Click here to view the full IFRS 16 standard](https://github.com/bilzz007/ifrs16-lease-tool/blob/main/ifrs-16-leases.pdf)"
+)
 
-Use the panel on the **left sidebar** to enter your lease details (like asset class, term, payments, discount rate, etc.).
-
-Then, click the **'Generate Lease Model'** button to view amortization schedules, journal entries, and summaries.
-
-📘 [Click here to view the full IFRS 16 standard](https://github.com/bilzz007/ifrs16-lease-tool/blob/main/ifrs-16-leases.pdf)
-""")
-
-Use the panel on the **left sidebar** to enter your lease details (like asset class, term, payments, discount rate, etc.).
-
-Then, click the **'Generate Lease Model'** button to view amortization schedules, journal entries, and summaries.
-""")
 
 st.sidebar.header("Lease Inputs")
 lease_name = st.sidebar.text_input("Lease Name", "Lease A")
