@@ -205,11 +205,24 @@ if residual_value > 0:
         st.subheader("📒 Journal Entries (IFRS 16)")
 
         st.markdown("#### Initial Recognition")
-        init_je = pd.DataFrame([
-            {"Date": start_date, "Account": "Dr Right-of-use Asset", "Amount": f"${rou_asset:,.0f}"},
-            {"Date": start_date, "Account": "Cr Lease Liability", "Amount": f"${liability:,.0f}"}
-        ])
-        st.dataframe(init_je)
+
+init_je_rows = [
+    {"Date": start_date, "Account": "Dr Right-of-use Asset", "Amount": f"${rou_asset:,.0f}"},
+    {"Date": start_date, "Account": "Cr Lease Liability (PV of lease payments incl. RVG)", "Amount": f"${liability:,.0f}"}
+]
+
+if direct_costs > 0:
+    init_je_rows.append({"Date": start_date, "Account": "Dr Initial Direct Costs", "Amount": f"${direct_costs:,.0f}"})
+
+if incentives > 0:
+    init_je_rows.append({"Date": start_date, "Account": "Cr Lease Incentives", "Amount": f"${incentives:,.0f}"})
+
+if residual_value > 0:
+    init_je_rows.append({"Date": start_date, "Account": "🔍 Note", "Amount": f"Includes RVG of ${residual_value:,.0f}"})
+
+init_je = pd.DataFrame(init_je_rows)
+st.dataframe(init_je, use_container_width=True)
+
 
         st.markdown("#### Monthly Lease Entries")
         monthly_entries = []
