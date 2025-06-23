@@ -118,35 +118,33 @@ if st.sidebar.button("Generate Lease Model"):
             "lease_name": lease_name,
             "asset_class": asset_class
         })
-# --- Tabbed Disclosure View ---
+# --- Welcome guidance ---
+st.success("✅ Model generated successfully! Use the tabs below to review amortization schedule, disclosures, and tests.")
+st.info("📌 Use the **left sidebar** to modify lease inputs and generate a new model.")
 
-if "schedule_df" in st.session_state:
-    df = st.session_state["schedule_df"]
-    liability = st.session_state["liability"]
-    rou_asset = st.session_state["rou_asset"]
-    start_date = st.session_state["start_date"]
-    term_months = st.session_state["term_months"]
-    adjusted_payments = st.session_state["adjusted_payments"]
-    discount_rate = st.session_state["discount_rate"]
-    entity = st.session_state["entity"]
-    lease_name = st.session_state["lease_name"]
-    asset_class = st.session_state["asset_class"]
+# --- Tabs ---
+tab1, tab2, tab3 = st.tabs(["📘 Quantitative & Schedule", "📄 Descriptive Disclosures", "🧪 QA Test Suite"])
 
-    df["Interest (num)"] = df["Interest"].str.replace(",", "").astype(float)
-    df["Principal (num)"] = df["Principal"].str.replace(",", "").astype(float)
-    df["Depreciation (num)"] = df["Depreciation"].str.replace(",", "").astype(float)
-    df["Payment (num)"] = df["Payment"].str.replace(",", "").astype(float)
+# --- Tab 1: Quantitative + Amortization ---
+with tab1:
+    st.subheader("📘 Lease Summary")
+    st.markdown(f"""
+**Lease Name:** {lease_name}  
+**Entity:** {entity}  
+**Location:** {location}  
+**Asset Class:** {asset_class}  
+**Lease Term:** {term_months} months  
+**Start Date:** {start_date.strftime('%Y-%m-%d')}  
+**Discount Rate:** {discount_rate*100:.2f}%  
+**Initial Lease Liability:** ${liability:,.0f}  
+**Initial Right-of-use Asset:** ${rou_asset:,.0f}
+""")
 
-    total_interest = df["Interest (num)"].sum()
-    total_depr = df["Depreciation (num)"].sum()
-    total_cash = df["Payment (num)"].sum()
+    st.subheader("📄 Amortization Schedule")
+    st.dataframe(df)
 
-    tab1, tab2, tab3 = st.tabs(["📘 Quantitative Disclosures", "📄 Descriptive Disclosures", "🧪 QA Test Suite"])
-
-    # --- Tab 1: Quantitative Disclosures ---
-    with tab1:
-        st.subheader("📘 Quantitative Disclosures (IFRS 16)")
-        st.markdown(f"""
+    st.subheader("📘 Quantitative Disclosures (IFRS 16)")
+    st.markdown(f"""
 **Statement of Financial Position**  
 - Right-of-use Asset ({asset_class}): ${rou_asset:,.0f}  
 - Lease Liability (Opening): ${liability:,.0f}  
@@ -162,67 +160,113 @@ if "schedule_df" in st.session_state:
 - Interest: ${total_interest:,.0f}  
 """)
 
-        maturity_df = pd.DataFrame({
-            "Year": [(start_date + relativedelta(months=i)).year for i in range(term_months)],
-            "Undiscounted Payment": df["Payment (num)"]
-        }).groupby("Year").sum().astype(int)
+    maturity_df = pd.DataFrame({
+        "Year": [(start_date + relativedelta(months=i)).year for i in range(term_months)],
+        "Undiscounted Payment": df["Payment (num)"]
+    }).groupby("Year").sum().astype(int)
 
-        st.markdown("### 📊 Maturity Analysis (Undiscounted)")
-        st.dataframe(maturity_df)
+    st.markdown("### 📊 Maturity Analysis (Undiscounted)")
+    st.dataframe(maturity_df)
 
-    # --- Tab 2: Descriptive Disclosures ---
-    with tab2:
-        st.subheader("📄 General Descriptive Disclosures (IFRS 16: 59–60A)")
+# --- Tab 2: Descriptive Disclosures ---
+with tab2:
+    st.subheader("📄 General Descriptive Disclosures (IFRS 16: 59–60A)")
 
-        para59a = st.text_area("📌 Nature of leasing activities (IFRS 16:59a)", 
-            "The entity leases office buildings, vehicles, and IT equipment under non-cancellable lease contracts.")
+    para59a = st.text_area("📌 Nature of leasing activities (IFRS 16:59a)", 
+        "The entity leases office buildings, vehicles, and IT equipment under non-cancellable lease contracts.")
 
-        para59b = st.text_area("📌 Expected future cash outflows not included in liabilities (IFRS 16:59b)",
-            "Certain leases contain variable payment clauses linked to CPI or usage. Extension and termination options exist but are not reasonably certain.")
+    para59b = st.text_area("📌 Expected future cash outflows not included in liabilities (IFRS 16:59b)",
+        "Certain leases contain variable payment clauses linked to CPI or usage. Extension and termination options exist but are not reasonably certain.")
 
-        para59c = st.text_area("📌 Restrictions or covenants (IFRS 16:59c)", 
-            "Some leases impose restrictions on subleasing, modifications, or use of the leased asset.")
+    para59c = st.text_area("📌 Restrictions or covenants (IFRS 16:59c)", 
+        "Some leases impose restrictions on subleasing, modifications, or use of the leased asset.")
 
-        para59d = st.text_area("📌 Practical expedients applied (IFRS 16:59d)", 
-            "The company elected the short-term lease exemption for leases under 12 months and the low-value exemption for IT accessories.")
+    para59d = st.text_area("📌 Practical expedients applied (IFRS 16:59d)", 
+        "The company elected the short-term lease exemption for leases under 12 months and the low-value exemption for IT accessories.")
 
-        para60a = st.text_area("📌 Expense breakdown and policy explanation (IFRS 16:60A)", 
-            "Total lease expense includes depreciation of right-of-use assets and interest on lease liabilities. Variable and exempt leases are recognized on a straight-line basis.")
+    para60a = st.text_area("📌 Expense breakdown and policy explanation (IFRS 16:60A)", 
+        "Total lease expense includes depreciation of right-of-use assets and interest on lease liabilities. Variable and exempt leases are recognized on a straight-line basis.")
 
-        st.markdown("✅ These disclosures are editable and can be copied into financial reports or audit documents.")
+# --- Tab 3: QA Test Suite ---
+with tab3:
+    st.subheader("🧪 Internal QA Test Suite")
 
-    # --- Tab 3: QA Tests ---
-    with tab3:
-        st.subheader("🧪 Internal QA Test Suite")
+    def try_assert(name, fn):
+        try:
+            fn()
+            st.success(f"✅ {name}")
+        except AssertionError as e:
+            st.error(f"❌ {name} failed: {str(e)}")
 
-        def try_assert(name, fn):
-            try:
-                fn()
-                st.success(f"✅ {name}")
-            except AssertionError as e:
-                st.error(f"❌ {name} failed: {str(e)}")
+    def test_liability():
+        expected = calculate_lease_liability_from_payments(adjusted_payments, discount_rate)
+        assert abs(liability - expected) < 1, f"Expected {expected}, got {liability}"
 
-        def test_liability():
-            expected = calculate_lease_liability_from_payments(adjusted_payments, discount_rate)
-            assert abs(liability - expected) < 1, f"Expected {expected}, got {liability}"
+    def test_rou_asset():
+        expected = calculate_right_of_use_asset(liability)
+        assert abs(rou_asset - expected) < 1, f"Expected {expected}, got {rou_asset}"
 
-        def test_rou_asset():
-            expected = calculate_right_of_use_asset(liability)
-            assert abs(rou_asset - expected) < 1, f"Expected {expected}, got {rou_asset}"
+    def test_depr_sum():
+        schedule = generate_daily_depreciation_schedule(start_date, term_months, rou_asset)
+        total = round(sum(row[2] for row in schedule), 2)
+        assert abs(total - rou_asset) < 1, f"Depreciation sum {total} != ROU asset {rou_asset}"
 
-        def test_depr_sum():
-            schedule = generate_daily_depreciation_schedule(start_date, term_months, rou_asset)
-            total = round(sum(row[2] for row in schedule), 2)
-            assert abs(total - rou_asset) < 1, f"Depreciation sum {total} != ROU asset {rou_asset}"
+    def test_balances():
+        df2, _ = generate_amortization_schedule(start_date, adjusted_payments, discount_rate, term_months, rou_asset)
+        end_liab = float(df2["Closing Liability"].iloc[-1].replace(",", ""))
+        end_rou = float(df2["Right-of-use Asset Closing Balance"].iloc[-1].replace(",", ""))
+        assert abs(end_liab) < 1, f"Ending liability not zero: {end_liab}"
+        assert abs(end_rou) < 1, f"Ending ROU not zero: {end_rou}"
 
-        def test_balances():
-            df2, _ = generate_amortization_schedule(start_date, adjusted_payments, discount_rate, term_months, rou_asset)
-            end_liab = float(df2["Closing Liability"].iloc[-1].replace(",", ""))
-            end_rou = float(df2["Right-of-use Asset Closing Balance"].iloc[-1].replace(",", ""))
-            assert abs(end_liab) < 1, f"Ending liability not zero: {end_liab}"
-            assert abs(end_rou) < 1, f"Ending ROU not zero: {end_rou}"
+    try_assert("Lease liability calculation", test_liability)
+    try_assert("ROU asset calculation", test_rou_asset)
+    try_assert("Depreciation sum", test_depr_sum)
+    try_assert("Final balances = 0", test_balances)
 
-        try_assert("Lease liability calculation", test_liability)
-        try_assert("ROU asset calculation", test_rou_asset)
-        try_assert("Depreciation sum", test_depr_sum)
-        try_assert("Final balances = 0", test_balances)
+# --- Export Button ---
+full_disclosure = f"""# IFRS 16 Lease Disclosure – {lease_name}
+
+## Summary
+- **Entity:** {entity}
+- **Lease Name:** {lease_name}
+- **Location:** {location}
+- **Asset Class:** {asset_class}
+- **Start Date:** {start_date.strftime('%Y-%m-%d')}
+- **Term:** {term_months} months
+- **Discount Rate:** {discount_rate * 100:.2f}%
+- **Initial Liability:** ${liability:,.0f}
+- **ROU Asset:** ${rou_asset:,.0f}
+
+## Amortization Table (Summary)
+{df.to_csv(index=False)}
+
+## Quantitative Disclosures
+- ROU Asset: ${rou_asset:,.0f}
+- Lease Liability (Opening): ${liability:,.0f}
+- Depreciation: ${total_depr:,.0f}
+- Interest: ${total_interest:,.0f}
+- Total Lease Payments: ${total_cash:,.0f}
+
+## Descriptive Disclosures
+### IFRS 16:59(a) – Nature of Leasing
+{para59a}
+
+### IFRS 16:59(b) – Future Cash Outflows Not Included
+{para59b}
+
+### IFRS 16:59(c) – Restrictions / Covenants
+{para59c}
+
+### IFRS 16:59(d) – Practical Expedients
+{para59d}
+
+### IFRS 16:60A – Expense Breakdown
+{para60a}
+"""
+
+st.download_button(
+    label="⬇️ Download Full Disclosure as TXT",
+    file_name=f"IFRS16_Disclosure_{lease_name.replace(' ', '_')}.txt",
+    mime="text/plain",
+    data=full_disclosure
+)
