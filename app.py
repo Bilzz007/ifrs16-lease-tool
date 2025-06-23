@@ -25,7 +25,7 @@ def generate_daily_depreciation_schedule(start_date, term_months, rou_asset):
         cumulative_depr += depreciation
         rou_balance = round(rou_asset - cumulative_depr, 2)
         if i == term_months - 1:
-            rou_balance = 0  # force zero in last month
+            rou_balance = 0
         schedule.append((i + 1, month_start, depreciation, rou_balance))
     return schedule
 
@@ -53,8 +53,20 @@ def generate_amortization_schedule(start_date, payment, rate, term_months, rou_a
         })
     return pd.DataFrame(schedule), rou_asset
 
-st.set_page_config(page_title="IFRS 16 Lease Model v5", layout="wide")
-st.title("📘 IFRS 16 Lease Model Tool — v5")
+st.set_page_config(page_title="IFRS 16 - Leases", layout="wide")
+st.title("📘 IFRS 16 – Leases")
+
+# 🚀 Usage Instructions
+st.info(
+    "👋 **Welcome to the IFRS 16 – Leases Model Tool!**
+
+"
+    "To get started, use the panel on the **left sidebar** to enter your lease details "
+    "(like asset class, term, payments, discount rate, etc.).
+
+"
+    "Then, click the **'Generate Lease Model'** button to view amortization schedules, journal entries, and summaries."
+)
 
 st.sidebar.header("Lease Inputs")
 lease_name = st.sidebar.text_input("Lease Name", "Lease A")
@@ -96,11 +108,10 @@ if st.sidebar.button("Generate Lease Model"):
         liability = calculate_lease_liability(payment, discount_rate / 100, term_months)
         rou_asset = calculate_right_of_use_asset(liability, direct_costs, incentives)
 
-        # Option 1 clean formatting
         st.markdown(f"""
-**Initial Lease Liability:** ${liability:,.0f}  
-**Initial Right-of-use Asset:** ${rou_asset:,.0f}
-""")
+<b>Initial Lease Liability:</b> ${liability:,.0f}<br>
+<b>Initial Right-of-use Asset:</b> ${rou_asset:,.0f}
+""", unsafe_allow_html=True)
 
         st.subheader("📄 Amortization Schedule (Daily Depreciation)")
         schedule_df, _ = generate_amortization_schedule(start_date, payment, discount_rate / 100, term_months, rou_asset)
