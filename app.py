@@ -59,6 +59,13 @@ st.info("""👋 **Welcome to the IFRS 16 – Leases Model Tool!**
 Use the panel on the **left sidebar** to enter your lease details (like asset class, term, payments, discount rate, etc.).
 
 Then, click the **'Generate Lease Model'** button to view amortization schedules, journal entries, and summaries.
+
+📘 [Click here to view the full IFRS 16 standard](https://github.com/bilzz007/ifrs16-lease-tool/blob/main/ifrs-16-leases.pdf)
+""")
+
+Use the panel on the **left sidebar** to enter your lease details (like asset class, term, payments, discount rate, etc.).
+
+Then, click the **'Generate Lease Model'** button to view amortization schedules, journal entries, and summaries.
 """)
 
 st.sidebar.header("Lease Inputs")
@@ -87,9 +94,7 @@ if use_slider == "Slider":
 else:
     discount_rate = st.sidebar.number_input("Discount Rate (%)", 0.0, 100.0, 6.0, step=0.1)
 
-st.sidebar.markdown("**IFRS 16:24(d)** – Initial Direct Costs increase the Right-of-use asset.")
 direct_costs = st.sidebar.number_input("Initial Direct Costs", min_value=0.0, value=0.0)
-st.sidebar.markdown("**IFRS 16:24(c)** – Lease Incentives reduce the Right-of-use asset.")
 incentives = st.sidebar.number_input("Lease Incentives", min_value=0.0, value=0.0)
 cpi = st.sidebar.slider("📈 Annual CPI Increase (%)", 0.0, 10.0, 0.0)
 
