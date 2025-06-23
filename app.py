@@ -67,7 +67,17 @@ entity = st.sidebar.text_input("Entity", "Entity A")
 location = st.sidebar.text_input("Location", "Main Office")
 asset_class = st.sidebar.selectbox("Asset Class", ["Building", "Equipment", "Vehicle", "Other"])
 start_date = st.sidebar.date_input("Lease Start Date", datetime.today())
-term_months = st.sidebar.number_input("Lease Term (months)", min_value=1, value=24)
+
+lease_input_mode = st.sidebar.radio("Define Lease Term By:", ["Number of Periods", "Start and End Dates"])
+start_date = st.sidebar.date_input("Lease Start Date", datetime.today())
+
+if lease_input_mode == "Number of Periods":
+    period_unit = st.sidebar.selectbox("Period Unit", ["Months", "Quarters", "Years"])
+    period_count = st.sidebar.number_input("Number of Periods", min_value=1, value=24)
+    term_months = period_count * {"Months": 1, "Quarters": 3, "Years": 12}[period_unit]
+else:
+    end_date = st.sidebar.date_input("Lease End Date", start_date + relativedelta(months=24))
+    term_months = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month)
 payment = st.sidebar.number_input("Monthly Payment", min_value=0.0, value=10000.0)
 
 use_slider = st.sidebar.radio("Discount Rate Input Method", ["Slider", "Manual Entry"])
@@ -115,6 +125,6 @@ if st.sidebar.button("Generate Lease Model"):
 - **Initial Right-of-use Asset:** ${rou_asset:,.0f}
 """)
 
-        st.subheader("📄 Amortization Schedule (Daily Depreciation)")
+        st.subheader("📄 Schedule for Lease Liability and Depreciation")
         schedule_df, _ = generate_amortization_schedule(start_date, payment, discount_rate / 100, term_months, rou_asset)
         st.dataframe(schedule_df)
