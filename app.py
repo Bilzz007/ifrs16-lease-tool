@@ -59,8 +59,6 @@ st.info("""👋 **Welcome to the IFRS 16 – Leases Model Tool!**
 Use the panel on the **left sidebar** to enter your lease details (like asset class, term, payments, discount rate, etc.).
 
 Then, click the **'Generate Lease Model'** button to view amortization schedules, journal entries, and summaries.
-
-📘 [Click here to view the full IFRS 16 standard](https://github.com/bilzz007/ifrs16-lease-tool/blob/main/ifrs-16-leases.pdf)
 """)
 
 Use the panel on the **left sidebar** to enter your lease details (like asset class, term, payments, discount rate, etc.).
@@ -68,6 +66,22 @@ Use the panel on the **left sidebar** to enter your lease details (like asset cl
 Then, click the **'Generate Lease Model'** button to view amortization schedules, journal entries, and summaries.
 """)
 
+import csv
+
+# Add this checkbox after st.info block
+if st.checkbox("📖 Show full IFRS 16 standard"):
+    with open("ifrs16_sections.csv", "r", encoding="utf-8") as file:
+        reader = csv.reader(file)
+        next(reader)  # skip header
+        current_section = ""
+        for row in reader:
+            section, paragraph, text = row
+            if section != current_section:
+                current_section = section
+                st.markdown(f"---\n### 📘 {section}")
+            with st.expander(f"¶ {paragraph}"):
+                st.markdown(text)
+                
 st.sidebar.header("Lease Inputs")
 lease_name = st.sidebar.text_input("Lease Name", "Lease A")
 entity = st.sidebar.text_input("Entity", "Entity A")
