@@ -66,8 +66,6 @@ lease_name = st.sidebar.text_input("Lease Name", "Lease A")
 entity = st.sidebar.text_input("Entity", "Entity A")
 location = st.sidebar.text_input("Location", "Main Office")
 asset_class = st.sidebar.selectbox("Asset Class", ["Building", "Equipment", "Vehicle", "Other"])
-start_date = st.sidebar.date_input("Lease Start Date (for Period Option)", datetime.today())
-
 
 lease_input_mode = st.sidebar.radio("Define Lease Term By:", ["Number of Periods", "Start and End Dates"])
 
@@ -80,6 +78,7 @@ else:
     start_date = st.sidebar.date_input("Lease Start Date")
     end_date = st.sidebar.date_input("Lease End Date", start_date + relativedelta(months=24))
     term_months = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month)
+
 payment = st.sidebar.number_input("Monthly Payment", min_value=0.0, value=10000.0)
 
 use_slider = st.sidebar.radio("Discount Rate Input Method", ["Slider", "Manual Entry"])
@@ -130,3 +129,19 @@ if st.sidebar.button("Generate Lease Model"):
         st.subheader("📄 Schedule for Lease Liability and Depreciation")
         schedule_df, _ = generate_amortization_schedule(start_date, payment, discount_rate / 100, term_months, rou_asset)
         st.dataframe(schedule_df)
+
+        st.subheader("🔍 Model QA Assistant")
+
+        def run_qa_checks(df):
+            errors = []
+            if df["Right-of-use Asset Closing Balance"].iloc[-1] != "0":
+                errors.append("❌ Right-of-use asset should reduce to 0 by end of lease.")
+            if df["Closing Liability"].iloc[-1] != "0":
+                errors.append("❌ Lease liability should be zero at the end.")
+            if not errors:
+                return ["✅ All basic checks passed."]
+            return errors
+
+        test_results = run_qa_checks(schedule_df)
+        for result in test_results:
+            st.markdown(f"- {result}")
