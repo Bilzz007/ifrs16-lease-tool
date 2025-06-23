@@ -51,8 +51,8 @@ def generate_amortization_schedule(start_date, payment, rate, term_months, rou_a
         })
     return pd.DataFrame(schedule), rou_asset
 
-# UI layout
 st.set_page_config(page_title="IFRS 16 - Leases", layout="wide")
+
 if "sidebar_expanded" not in st.session_state:
     st.session_state.sidebar_expanded = True
 
@@ -60,7 +60,6 @@ def collapse_sidebar():
     st.session_state.sidebar_expanded = False
 
 st.title("📘 IFRS 16 – Lease Model with Reassessment")
-
 st.info("Use the sidebar to enter lease details. After generating, you can optionally apply reassessment/modification.")
 
 LOW_VALUE_THRESHOLD = 5000
@@ -94,7 +93,8 @@ if st.session_state.sidebar_expanded:
     incentives = st.sidebar.number_input("Lease Incentives", min_value=0.0, value=0.0)
     cpi = st.sidebar.slider("📈 Annual CPI Increase (%)", 0.0, 10.0, 0.0)
 
-    generate_model = st.sidebar.button("Generate Lease Model")
+generate_model = st.sidebar.button("Generate Lease Model")
+
 if generate_model:
     collapse_sidebar()
     is_short_term = term_months < 12
@@ -133,9 +133,7 @@ if generate_model:
         schedule_df, _ = generate_amortization_schedule(start_date, payment, discount_rate / 100, term_months, rou_asset)
         st.dataframe(schedule_df)
 
-        # -----------------------------
         # 🔁 Reassessment Section
-        # -----------------------------
         st.markdown("---")
         st.subheader("🔁 Reassessment or Modification")
 
@@ -146,7 +144,6 @@ if generate_model:
             new_end_date = st.date_input("New Lease End Date", start_date + relativedelta(months=36))
 
             new_term_months = (new_end_date.year - effective_date.year) * 12 + (new_end_date.month - effective_date.month)
-
             classification = "Modification" if (new_term_months != term_months or new_payment != payment) else "Reassessment"
             st.markdown(f"📌 This qualifies as a **{classification}** under IFRS 16.")
 
