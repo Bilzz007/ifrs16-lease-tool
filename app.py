@@ -60,7 +60,7 @@ Use the panel on the **left sidebar** to enter your lease details (like asset cl
 
 Then, click the **'Generate Lease Model'** button to view amortization schedules, journal entries, and summaries.
 
-📘 [Click here to view the full IFRS 16 standard](https://github.com/bilzz007/ifrs16-lease-tool/blob/main/ifrs-16-leases.pdf)
+
 """)
 
 st.sidebar.header("Lease Inputs")
