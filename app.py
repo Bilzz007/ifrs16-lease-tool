@@ -205,10 +205,9 @@ if residual_value > 0:
         st.subheader("📒 Journal Entries (IFRS 16)")
 
         st.markdown("#### Initial Recognition")
-
-init_je_rows = [
-    {"Date": start_date, "Account": "Dr Right-of-use Asset", "Amount": f"${rou_asset:,.0f}"},
-    {"Date": start_date, "Account": "Cr Lease Liability (PV of lease payments incl. RVG)", "Amount": f"${liability:,.0f}"}
+        init_je_rows = [
+            {"Date": start_date, "Account": "Dr Right-of-use Asset", "Amount": f"${rou_asset:,.0f}"},
+            {"Date": start_date, "Account": "Cr Lease Liability (PV of lease payments incl. RVG)", "Amount": f"${liability:,.0f}"}
 ]
 
 if direct_costs > 0:
