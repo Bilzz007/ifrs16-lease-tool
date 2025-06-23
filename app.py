@@ -94,26 +94,15 @@ for i in range(num_leases):
                 rou_asset = calculate_right_of_use_asset(liability, direct_costs, incentives)
 
                 st.subheader("📘 Summary")
-                summary_text = (
-                    f"- **Lease:** {lease_name}  
-"
-                    f"- **Entity:** {entity}  
-"
-                    f"- **Location:** {location}  
-"
-                    f"- **Asset Class:** {asset_class}  
-"
-                    f"- **Start Date:** {start_date.strftime('%Y-%m-%d')}  
-"
-                    f"- **Term:** {term_months} months  
-"
-                    f"- **Discount Rate:** {discount_rate}%  
-"
-                    f"- **Initial Lease Liability:** ${liability:,.0f}  
-"
-                    f"- **Initial Right-of-use Asset:** ${rou_asset:,.0f}"
-                )
-                st.markdown(summary_text)
+                st.markdown(f"- **Lease:** {lease_name}")
+                st.markdown(f"- **Entity:** {entity}")
+                st.markdown(f"- **Location:** {location}")
+                st.markdown(f"- **Asset Class:** {asset_class}")
+                st.markdown(f"- **Start Date:** {start_date.strftime('%Y-%m-%d')}")
+                st.markdown(f"- **Term:** {term_months} months")
+                st.markdown(f"- **Discount Rate:** {discount_rate}%")
+                st.markdown(f"- **Initial Lease Liability:** ${liability:,.0f}")
+                st.markdown(f"- **Initial Right-of-use Asset:** ${rou_asset:,.0f}")
 
                 schedule_df, _ = generate_amortization_schedule(
                     start_date, payment, discount_rate / 100,
