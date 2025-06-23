@@ -59,6 +59,7 @@ if "sidebar_expanded" not in st.session_state:
 
 def collapse_sidebar():
     st.session_state.sidebar_expanded = False
+
 st.title("📘 IFRS 16 – Leases")
 
 st.info("""👋 **Welcome to the IFRS 16 – Leases Model Tool!**
@@ -76,7 +77,6 @@ location = st.sidebar.text_input("Location", "Main Office")
 asset_class = st.sidebar.selectbox("Asset Class", ["Building", "Equipment", "Vehicle", "Other"])
 start_date = st.sidebar.date_input("Lease Start Date (for Period Option)", datetime.today())
 
-
 lease_input_mode = st.sidebar.radio("Define Lease Term By:", ["Number of Periods", "Start and End Dates"])
 
 if lease_input_mode == "Number of Periods":
@@ -88,6 +88,7 @@ else:
     start_date = st.sidebar.date_input("Lease Start Date")
     end_date = st.sidebar.date_input("Lease End Date", start_date + relativedelta(months=24))
     term_months = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month)
+
 payment = st.sidebar.number_input("Monthly Payment", min_value=0.0, value=10000.0)
 
 use_slider = st.sidebar.radio("Discount Rate Input Method", ["Slider", "Manual Entry"])
@@ -103,8 +104,8 @@ cpi = st.sidebar.slider("📈 Annual CPI Increase (%)", 0.0, 10.0, 0.0)
 LOW_VALUE_THRESHOLD = 5000
 
 if st.sidebar.button("Generate Lease Model"):
-
-    collapse_sidebar()    is_short_term = term_months < 12
+    collapse_sidebar()
+    is_short_term = term_months < 12
     is_low_value = payment < LOW_VALUE_THRESHOLD
 
     if is_short_term or is_low_value:
