@@ -85,7 +85,25 @@ for i in range(num_leases):
 
             submitted = st.form_submit_button("Generate Lease Model")
 
+            
             if submitted:
+                is_short_term = term_months < 12
+                is_low_value = payment < LOW_VALUE_THRESHOLD
+
+                if is_short_term or is_low_value:
+                    reason = "short-term" if is_short_term else "low-value"
+                    st.warning(f"⚠️ Lease '{lease_name}' is treated as **{reason}** and exempt from capitalization under IFRS 16.")
+                    st.markdown("*Note: This exemption assumes monthly payments represent a low-value asset, as per IFRS 16 guidance (Para B8–B10). Final judgment may depend on the fair value of the underlying asset when new.*")
+                    st.subheader("📒 Non-Capitalized Lease Journal Entries")
+                    exempt_je = pd.DataFrame([{
+                        "Date": start_date + relativedelta(months=i),
+                        "Lease Name": lease_name,
+                        "JE Debit - Lease Expense": f"{payment:,.0f}",
+                        "JE Credit - Bank/Payables": f"{payment:,.0f}"
+                    } for i in range(term_months)])
+                    st.dataframe(exempt_je)
+                    continue
+
                 if not lease_name or term_months <= 0 or payment <= 0 or discount_rate <= 0:
                     st.warning("Please fill all mandatory fields correctly.")
                     continue
