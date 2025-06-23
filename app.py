@@ -2,8 +2,9 @@ import streamlit as st
 import pandas as pd
 from datetime import date
 from dateutil.relativedelta import relativedelta
+from collections import defaultdict
 
-# --- Calculation functions ---
+# --- Core calculations ---
 def calculate_right_of_use_asset(liability, direct_costs=0, incentives=0):
     return round(liability + direct_costs - incentives, 2)
 
@@ -55,10 +56,10 @@ def generate_amortization_schedule(start_date, payments, rate, term_months, rou_
         })
     return pd.DataFrame(schedule), rou_asset
 
-# --- App setup ---
+# --- App UI ---
 st.set_page_config("IFRS 16 Lease Model", layout="wide")
-st.title("📘 IFRS 16 Lease Accounting Model")
-st.info("👋 Use the **sidebar** to enter lease inputs. Click 'Generate Lease Model' to view schedules and disclosures.")
+st.title("📘 IFRS 16 Lease Model Tool")
+st.info("👋 Use the **sidebar** to enter lease details and reporting date. Then generate the lease model.")
 
 # --- Sidebar Inputs ---
 st.sidebar.header("Lease Inputs")
@@ -66,48 +67,36 @@ lease_name = st.sidebar.text_input("Lease Name", "Lease A")
 entity = st.sidebar.text_input("Entity", "Entity A")
 location = st.sidebar.text_input("Location", "Main Office")
 asset_class = st.sidebar.selectbox("Asset Class", ["Building", "Equipment", "Vehicle", "Other"])
+reporting_date = st.sidebar.date_input("📅 Reporting Date", value=date(2025, 12, 31))
 
 lease_mode = st.sidebar.radio("Define Lease Term By:", ["Number of Periods", "Start and End Dates"])
 if lease_mode == "Number of Periods":
-    start_date = st.sidebar.date_input("Start Date", value=date.today())
+    start_date = st.sidebar.date_input("Lease Start Date", value=date.today())
     unit = st.sidebar.selectbox("Period Unit", ["Months", "Quarters", "Years"])
     count = st.sidebar.number_input("Number of Periods", 1, value=24)
     term_months = count * {"Months": 1, "Quarters": 3, "Years": 12}[unit]
 else:
-    start_date = st.sidebar.date_input("Start Date", value=date.today())
-    end_date = st.sidebar.date_input("End Date", value=start_date + relativedelta(months=24))
+    start_date = st.sidebar.date_input("Lease Start Date", value=date.today())
+    end_date = st.sidebar.date_input("Lease End Date", value=start_date + relativedelta(months=24))
     term_months = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month)
 
 payment = st.sidebar.number_input("Monthly Payment", min_value=0.0, value=10000.0)
-rate_input = st.sidebar.radio("Discount Rate Input", ["Slider", "Manual"])
-discount_rate = st.sidebar.slider("Discount Rate (%)", 0.0, 100.0, 6.0) if rate_input == "Slider" else st.sidebar.number_input("Discount Rate (%)", 0.0, 100.0, 6.0)
+discount_rate = st.sidebar.slider("Discount Rate (%)", 0.0, 100.0, 6.0)
 direct_costs = st.sidebar.number_input("Initial Direct Costs", 0.0, value=0.0)
 incentives = st.sidebar.number_input("Lease Incentives", 0.0, value=0.0)
-cpi = st.sidebar.slider("📈 Annual CPI Increase (%)", 0.0, 10.0, 0.0)
+cpi = st.sidebar.slider("Annual CPI (%)", 0.0, 10.0, 0.0)
 
-# --- Generate model ---
 if st.sidebar.button("Generate Lease Model"):
     adjusted = generate_cpi_adjusted_payments(payment, term_months, cpi)
     liability = calculate_lease_liability_from_payments(adjusted, discount_rate / 100)
     rou_asset = calculate_right_of_use_asset(liability, direct_costs, incentives)
     schedule_df, _ = generate_amortization_schedule(start_date, adjusted, discount_rate / 100, term_months, rou_asset)
 
-    st.session_state.update({
-        "schedule_df": schedule_df,
-        "liability": liability,
-        "rou_asset": rou_asset,
-        "start_date": start_date,
-        "term_months": term_months,
-        "adjusted_payments": adjusted,
-        "discount_rate": discount_rate / 100,
-        "entity": entity,
-        "location": location,
-        "lease_name": lease_name,
-        "asset_class": asset_class
-    })
+    st.session_state["schedule_df"] = schedule_df
 
-    st.success("✅ Model generated! Use the tabs below to review amortization schedule, disclosures, and QA.")
-    tab1, tab2, tab3 = st.tabs(["📘 Quantitative & Schedule", "📄 Descriptive Disclosures", "🧪 QA Test Suite"])
+    st.success("✅ Model generated successfully!")
+
+    tab1, tab2, tab3 = st.tabs(["📘 Quantitative & Schedule", "📄 Descriptive Disclosures", "🧪 QA Tests"])
 
     with tab1:
         df = st.session_state["schedule_df"]
@@ -118,39 +107,43 @@ if st.sidebar.button("Generate Lease Model"):
 
         st.subheader("📘 Lease Summary")
         st.markdown(f"""
-**Lease Name:** {lease_name}  
-**Entity:** {entity}  
-**Location:** {location}  
-**Asset Class:** {asset_class}  
-**Lease Term:** {term_months} months  
-**Start Date:** {start_date.strftime('%Y-%m-%d')}  
-**Discount Rate:** {discount_rate:.2f}%  
-**Initial Lease Liability:** ${liability:,.0f}  
-**Initial Right-of-use Asset:** ${rou_asset:,.0f}
+- **Lease:** {lease_name}  
+- **Entity:** {entity}  
+- **Location:** {location}  
+- **Start Date:** {start_date.strftime('%Y-%m-%d')}  
+- **Lease Term:** {term_months} months  
+- **Discount Rate:** {discount_rate:.2f}%  
+- **Initial Liability:** ${liability:,.0f}  
+- **ROU Asset:** ${rou_asset:,.0f}
 """)
 
         st.subheader("📄 Amortization Schedule")
         st.dataframe(df)
 
-        st.subheader("📘 IFRS 16 Quantitative Disclosures")
-        st.markdown("### 📄 Statement of Financial Position")
-        st.markdown(f"""
-- **Right-of-use Asset (Closing):** $0  
-- **Lease Liability (Closing):** $0  
-- **Lease Liability (Opening):** ${liability:,.0f}
-""")
-        st.markdown("### 📃 Statement of Profit or Loss")
-        st.markdown(f"""
-- **Depreciation Expense on ROU Asset:** ${df["Depreciation (num)"].sum():,.0f}  
-- **Interest Expense on Lease Liability:** ${df["Interest (num)"].sum():,.0f}
-""")
-        st.markdown("### 💰 Statement of Cash Flows")
-        st.markdown(f"""
-- **Total Lease Payments:** ${df["Payment (num)"].sum():,.0f}  
-  - Principal Portion: ${df["Principal (num)"].sum():,.0f}  
-  - Interest Portion: ${df["Interest (num)"].sum():,.0f}
-""")
-        st.markdown("### 📊 Maturity Analysis (Undiscounted)")
+        st.subheader("📘 FS-style Quantitative Disclosure (CY vs PY)")
+
+        cy = reporting_date.year
+        py = cy - 1
+        totals_by_year = defaultdict(lambda: {"ROU": 0, "LIAB": 0, "DEP": 0, "INT": 0})
+        for _, row in df.iterrows():
+            y = row["Date"].year
+            totals_by_year[y]["DEP"] += row["Depreciation (num)"]
+            totals_by_year[y]["INT"] += row["Interest (num)"]
+            totals_by_year[y]["LIAB"] = float(row["Closing Liability"].replace(",", ""))
+            totals_by_year[y]["ROU"] = float(row["Right-of-use Asset Closing Balance"].replace(",", ""))
+
+        def format_block(label, y):
+            return f"""
+### As of 31 Dec {y} ({label})
+- **ROU Asset:** ${totals_by_year[y]["ROU"]:,.0f}
+- **Lease Liability:** ${totals_by_year[y]["LIAB"]:,.0f}
+- **YTD Depreciation:** ${totals_by_year[y]["DEP"]:,.0f}
+- **YTD Interest:** ${totals_by_year[y]["INT"]:,.0f}
+"""
+        st.markdown(format_block("CY", cy))
+        st.markdown(format_block("PY", py))
+
+        st.subheader("📊 Maturity Analysis")
         maturity_df = pd.DataFrame({
             "Year": [(start_date + relativedelta(months=i)).year for i in range(term_months)],
             "Undiscounted Payment": df["Payment (num)"]
@@ -158,56 +151,52 @@ if st.sidebar.button("Generate Lease Model"):
         st.dataframe(maturity_df)
 
     with tab2:
-        st.subheader("📄 Descriptive Disclosures (IFRS 16: 59–60A)")
-        para59a = st.text_area("59(a): Nature of leasing activities", "The entity leases office buildings and vehicles.")
-        para59b = st.text_area("59(b): Future outflows not in liability", "Certain leases include CPI-linked payments.")
-        para59c = st.text_area("59(c): Restrictions/covenants", "Leases restrict sub-letting and asset use.")
-        para59d = st.text_area("59(d): Practical expedients", "Short-term and low-value exemptions applied.")
-        para60a = st.text_area("60A: Expense explanation", "Lease expense includes depreciation and interest.")
+        st.subheader("📄 Descriptive Disclosures (IFRS 16)")
+        para59a = st.text_area("59(a) – Nature of leasing", "The entity leases buildings and vehicles...")
+        para59b = st.text_area("59(b) – Future outflows", "Some leases include CPI-linked increases...")
+        para59c = st.text_area("59(c) – Restrictions", "Restrictions exist on sub-letting and use...")
+        para59d = st.text_area("59(d) – Expedients", "Short-term and low-value exemptions used.")
+        para60a = st.text_area("60A – Expense policies", "Lease expense includes depreciation and interest.")
 
     with tab3:
-        st.subheader("🧪 QA Test Suite")
+        st.subheader("🧪 QA Tests")
 
-        def try_assert(name, fn):
+        def check(label, fn):
             try:
                 fn()
-                st.success(f"✅ {name}")
+                st.success(f"✅ {label}")
             except AssertionError as e:
-                st.error(f"❌ {name}: {e}")
+                st.error(f"❌ {label}: {str(e)}")
 
-        try_assert("Liability match", lambda: abs(calculate_lease_liability_from_payments(adjusted, discount_rate / 100) - liability) < 1)
-        try_assert("ROU match", lambda: abs(rou_asset - (liability + direct_costs - incentives)) < 1)
-        try_assert("Depreciation match", lambda: abs(sum(generate_daily_depreciation_schedule(start_date, term_months, rou_asset)[i][2] for i in range(term_months)) - rou_asset) < 1)
-        try_assert("Ending balances = 0", lambda: (
-            abs(float(df['Closing Liability'].iloc[-1].replace(",", ""))) < 1 and
-            abs(float(df['Right-of-use Asset Closing Balance'].iloc[-1].replace(",", ""))) < 1
+        check("Liability calculation", lambda: abs(liability - calculate_lease_liability_from_payments(adjusted, discount_rate / 100)) < 1)
+        check("ROU calculation", lambda: abs(rou_asset - (liability + direct_costs - incentives)) < 1)
+        check("Ending balances = 0", lambda: (
+            abs(float(df["Closing Liability"].iloc[-1].replace(",", ""))) < 1 and
+            abs(float(df["Right-of-use Asset Closing Balance"].iloc[-1].replace(",", ""))) < 1
         ))
 
-    # --- Export Disclosure ---
     full_txt = f"""# IFRS 16 Lease Disclosure – {lease_name}
 
-## Summary
-Entity: {entity}
-Lease Name: {lease_name}
-Asset Class: {asset_class}
-Start Date: {start_date.strftime('%Y-%m-%d')}
-Term: {term_months} months
-Initial Liability: ${liability:,.0f}
-ROU Asset: ${rou_asset:,.0f}
+## FS Summary (as of {reporting_date})
+CY: {cy}, PY: {py}
 
-## Amortization Schedule
-{df.to_csv(index=False)}
+CY
+- ROU: ${totals_by_year[cy]["ROU"]:,.0f}
+- Liability: ${totals_by_year[cy]["LIAB"]:,.0f}
+- Depreciation: ${totals_by_year[cy]["DEP"]:,.0f}
+- Interest: ${totals_by_year[cy]["INT"]:,.0f}
 
-## Quantitative
-- Depreciation: ${df["Depreciation (num)"].sum():,.0f}
-- Interest: ${df["Interest (num)"].sum():,.0f}
-- Total Payments: ${df["Payment (num)"].sum():,.0f}
+PY
+- ROU: ${totals_by_year[py]["ROU"]:,.0f}
+- Liability: ${totals_by_year[py]["LIAB"]:,.0f}
+- Depreciation: ${totals_by_year[py]["DEP"]:,.0f}
+- Interest: ${totals_by_year[py]["INT"]:,.0f}
 
-## Descriptive Disclosures
+## Disclosures (IFRS 16)
 59(a): {para59a}
 59(b): {para59b}
 59(c): {para59c}
 59(d): {para59d}
-60A : {para60a}
+60A: {para60a}
 """
-    st.download_button("⬇️ Download Full Disclosure (TXT)", data=full_txt, file_name=f"IFRS16_{lease_name}.txt")
+    st.download_button("⬇️ Download Disclosure (TXT)", data=full_txt, file_name=f"IFRS16_Disclosure_{lease_name}.txt")
