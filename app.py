@@ -87,10 +87,10 @@ if use_slider == "Slider":
 else:
     discount_rate = st.sidebar.number_input("Discount Rate (%)", 0.0, 100.0, 6.0, step=0.1)
 
+st.sidebar.markdown("**IFRS 16:24(d)** – Initial Direct Costs increase the Right-of-use asset.")
 direct_costs = st.sidebar.number_input("Initial Direct Costs", min_value=0.0, value=0.0)
-st.sidebar.caption("ℹ️ IFRS 16:24(d) — Initial Direct Costs increase the Right-of-use asset.")
+st.sidebar.markdown("**IFRS 16:24(c)** – Lease Incentives reduce the Right-of-use asset.")
 incentives = st.sidebar.number_input("Lease Incentives", min_value=0.0, value=0.0)
-st.sidebar.caption("ℹ️ IFRS 16:24(c) — Lease Incentives reduce the Right-of-use asset.")
 cpi = st.sidebar.slider("📈 Annual CPI Increase (%)", 0.0, 10.0, 0.0)
 
 LOW_VALUE_THRESHOLD = 5000
