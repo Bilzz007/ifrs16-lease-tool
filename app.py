@@ -4,7 +4,7 @@ from datetime import date
 from dateutil.relativedelta import relativedelta
 from collections import defaultdict
 
-# --- Core calculations ---
+# --- Lease calculations ---
 def calculate_right_of_use_asset(liability, direct_costs=0, incentives=0):
     return round(liability + direct_costs - incentives, 2)
 
@@ -87,24 +87,21 @@ incentives = st.sidebar.number_input("Lease Incentives", 0.0, value=0.0)
 cpi = st.sidebar.slider("Annual CPI (%)", 0.0, 10.0, 0.0)
 
 if st.sidebar.button("Generate Lease Model"):
-    adjusted = generate_cpi_adjusted_payments(payment, term_months, cpi)
-    liability = calculate_lease_liability_from_payments(adjusted, discount_rate / 100)
+    payments = generate_cpi_adjusted_payments(payment, term_months, cpi)
+    liability = calculate_lease_liability_from_payments(payments, discount_rate / 100)
     rou_asset = calculate_right_of_use_asset(liability, direct_costs, incentives)
-    schedule_df, _ = generate_amortization_schedule(start_date, adjusted, discount_rate / 100, term_months, rou_asset)
+    df, _ = generate_amortization_schedule(start_date, payments, discount_rate / 100, term_months, rou_asset)
 
-    st.session_state["schedule_df"] = schedule_df
+    df["Interest (num)"] = df["Interest"].str.replace(",", "").astype(float)
+    df["Principal (num)"] = df["Principal"].str.replace(",", "").astype(float)
+    df["Depreciation (num)"] = df["Depreciation"].str.replace(",", "").astype(float)
+    df["Payment (num)"] = df["Payment"].str.replace(",", "").astype(float)
 
     st.success("✅ Model generated successfully!")
 
-    tab1, tab2, tab3 = st.tabs(["📘 Quantitative & Schedule", "📄 Descriptive Disclosures", "🧪 QA Tests"])
+    tab1, tab2, tab3 = st.tabs(["📘 Disclosures & Schedule", "📄 Descriptive Notes", "🧪 QA"])
 
     with tab1:
-        df = st.session_state["schedule_df"]
-        df["Interest (num)"] = df["Interest"].str.replace(",", "").astype(float)
-        df["Principal (num)"] = df["Principal"].str.replace(",", "").astype(float)
-        df["Depreciation (num)"] = df["Depreciation"].str.replace(",", "").astype(float)
-        df["Payment (num)"] = df["Payment"].str.replace(",", "").astype(float)
-
         st.subheader("📘 Lease Summary")
         st.markdown(f"""
 - **Lease:** {lease_name}  
@@ -114,89 +111,125 @@ if st.sidebar.button("Generate Lease Model"):
 - **Lease Term:** {term_months} months  
 - **Discount Rate:** {discount_rate:.2f}%  
 - **Initial Liability:** ${liability:,.0f}  
-- **ROU Asset:** ${rou_asset:,.0f}
+- **Right-of-use Asset:** ${rou_asset:,.0f}
 """)
 
         st.subheader("📄 Amortization Schedule")
-        st.dataframe(df)
+        st.dataframe(df, use_container_width=True)
 
-        st.subheader("📘 FS-style Quantitative Disclosure (CY vs PY)")
+        st.subheader("📊 FS-style Quantitative Disclosure")
 
         cy = reporting_date.year
         py = cy - 1
+        cy_date = date(cy, 12, 31)
+        py_date = date(py, 12, 31)
+
         totals_by_year = defaultdict(lambda: {"ROU": 0, "LIAB": 0, "DEP": 0, "INT": 0})
+        cf_by_year = defaultdict(lambda: {"PRIN": 0, "INT": 0})
+
         for _, row in df.iterrows():
             y = row["Date"].year
             totals_by_year[y]["DEP"] += row["Depreciation (num)"]
             totals_by_year[y]["INT"] += row["Interest (num)"]
             totals_by_year[y]["LIAB"] = float(row["Closing Liability"].replace(",", ""))
             totals_by_year[y]["ROU"] = float(row["Right-of-use Asset Closing Balance"].replace(",", ""))
+            cf_by_year[y]["PRIN"] += row["Principal (num)"]
+            cf_by_year[y]["INT"] += row["Interest (num)"]
 
-        def format_block(label, y):
-            return f"""
-### As of 31 Dec {y} ({label})
-- **ROU Asset:** ${totals_by_year[y]["ROU"]:,.0f}
-- **Lease Liability:** ${totals_by_year[y]["LIAB"]:,.0f}
-- **YTD Depreciation:** ${totals_by_year[y]["DEP"]:,.0f}
-- **YTD Interest:** ${totals_by_year[y]["INT"]:,.0f}
-"""
-        st.markdown(format_block("CY", cy))
-        st.markdown(format_block("PY", py))
+        def liability_split(ref_date):
+            cutoff = ref_date + relativedelta(months=12)
+            current = df[(df["Date"] > ref_date) & (df["Date"] <= cutoff)]["Principal (num)"].sum()
+            liab_rows = df[df["Date"] <= ref_date]
+            total_liab = float(liab_rows["Closing Liability"].iloc[-1]) if not liab_rows.empty else 0
+            return round(current), round(max(total_liab - current, 0))
 
-        st.subheader("📊 Maturity Analysis")
-        maturity_df = pd.DataFrame({
-            "Year": [(start_date + relativedelta(months=i)).year for i in range(term_months)],
-            "Undiscounted Payment": df["Payment (num)"]
-        }).groupby("Year").sum().astype(int)
-        st.dataframe(maturity_df)
+        cy_curr, cy_noncurr = liability_split(cy_date)
+        py_curr, py_noncurr = liability_split(py_date)
+
+        # SOFP
+        st.markdown("### 📄 Statement of Financial Position")
+        sofp = pd.DataFrame({
+            "Disclosure": ["Right-of-use assets (closing)", "Lease liabilities – current", "Lease liabilities – non-current"],
+            f"{cy} (CY)": [f"${totals_by_year[cy]['ROU']:,.0f}", f"${cy_curr:,.0f}", f"${cy_noncurr:,.0f}"],
+            f"{py} (PY)": [f"${totals_by_year[py]['ROU']:,.0f}", f"${py_curr:,.0f}", f"${py_noncurr:,.0f}"]
+        })
+        st.dataframe(sofp, use_container_width=True)
+
+        # SOCI
+        st.markdown("### 📃 Statement of Profit or Loss")
+        soci = pd.DataFrame({
+            "Disclosure": ["Depreciation expense (YTD)", "Interest expense (YTD)"],
+            f"{cy} (CY)": [f"${totals_by_year[cy]['DEP']:,.0f}", f"${totals_by_year[cy]['INT']:,.0f}"],
+            f"{py} (PY)": [f"${totals_by_year[py]['DEP']:,.0f}", f"${totals_by_year[py]['INT']:,.0f}"]
+        })
+        st.dataframe(soci, use_container_width=True)
+
+        # SOCF
+        st.markdown("### 💰 Statement of Cash Flows")
+        socf = pd.DataFrame({
+            "Disclosure": ["Lease payments – principal", "Lease payments – interest"],
+            f"{cy} (CY)": [f"${cf_by_year[cy]['PRIN']:,.0f}", f"${cf_by_year[cy]['INT']:,.0f}"],
+            f"{py} (PY)": [f"${cf_by_year[py]['PRIN']:,.0f}", f"${cf_by_year[py]['INT']:,.0f}"]
+        })
+        st.dataframe(socf, use_container_width=True)
 
     with tab2:
         st.subheader("📄 Descriptive Disclosures (IFRS 16)")
-        para59a = st.text_area("59(a) – Nature of leasing", "The entity leases buildings and vehicles...")
-        para59b = st.text_area("59(b) – Future outflows", "Some leases include CPI-linked increases...")
-        para59c = st.text_area("59(c) – Restrictions", "Restrictions exist on sub-letting and use...")
-        para59d = st.text_area("59(d) – Expedients", "Short-term and low-value exemptions used.")
-        para60a = st.text_area("60A – Expense policies", "Lease expense includes depreciation and interest.")
+        para59a = st.text_area("59(a) – Nature of leasing", "The entity leases office space and equipment...")
+        para59b = st.text_area("59(b) – Future cash outflows", "Some leases contain CPI escalation clauses...")
+        para59c = st.text_area("59(c) – Restrictions", "Certain leases restrict sub-letting and alterations...")
+        para59d = st.text_area("59(d) – Practical expedients", "Short-term and low-value lease exemptions applied.")
+        para60a = st.text_area("60A – Expense explanation", "Lease expense includes depreciation and interest expense.")
 
     with tab3:
         st.subheader("🧪 QA Tests")
 
-        def check(label, fn):
+        def assert_check(label, fn):
             try:
                 fn()
                 st.success(f"✅ {label}")
             except AssertionError as e:
-                st.error(f"❌ {label}: {str(e)}")
+                st.error(f"❌ {label}: {e}")
 
-        check("Liability calculation", lambda: abs(liability - calculate_lease_liability_from_payments(adjusted, discount_rate / 100)) < 1)
-        check("ROU calculation", lambda: abs(rou_asset - (liability + direct_costs - incentives)) < 1)
-        check("Ending balances = 0", lambda: (
-            abs(float(df["Closing Liability"].iloc[-1].replace(",", ""))) < 1 and
-            abs(float(df["Right-of-use Asset Closing Balance"].iloc[-1].replace(",", ""))) < 1
+        assert_check("Liability calculation check", lambda: abs(liability - calculate_lease_liability_from_payments(payments, discount_rate / 100)) < 1)
+        assert_check("ROU asset value check", lambda: abs(rou_asset - (liability + direct_costs - incentives)) < 1)
+        assert_check("Final balances are zero", lambda: (
+            abs(float(df['Closing Liability'].iloc[-1].replace(",", ""))) < 1 and
+            abs(float(df['Right-of-use Asset Closing Balance'].iloc[-1].replace(",", ""))) < 1
         ))
 
-    full_txt = f"""# IFRS 16 Lease Disclosure – {lease_name}
+    disclosure_txt = f"""# IFRS 16 Disclosure for {lease_name}
 
-## FS Summary (as of {reporting_date})
-CY: {cy}, PY: {py}
+Entity: {entity}
+Reporting Date: {reporting_date.strftime('%d %b %Y')}
 
-CY
-- ROU: ${totals_by_year[cy]["ROU"]:,.0f}
-- Liability: ${totals_by_year[cy]["LIAB"]:,.0f}
-- Depreciation: ${totals_by_year[cy]["DEP"]:,.0f}
-- Interest: ${totals_by_year[cy]["INT"]:,.0f}
+--- SOFP ---
+ROU ({cy}): ${totals_by_year[cy]['ROU']:,.0f}
+Liability ({cy}): ${cy_curr + cy_noncurr:,.0f} (Current: ${cy_curr:,.0f}, Non-current: ${cy_noncurr:,.0f})
 
-PY
-- ROU: ${totals_by_year[py]["ROU"]:,.0f}
-- Liability: ${totals_by_year[py]["LIAB"]:,.0f}
-- Depreciation: ${totals_by_year[py]["DEP"]:,.0f}
-- Interest: ${totals_by_year[py]["INT"]:,.0f}
+ROU ({py}): ${totals_by_year[py]['ROU']:,.0f}
+Liability ({py}): ${py_curr + py_noncurr:,.0f} (Current: ${py_curr:,.0f}, Non-current: ${py_noncurr:,.0f})
 
-## Disclosures (IFRS 16)
+--- SOCI ---
+Depreciation CY: ${totals_by_year[cy]['DEP']:,.0f}
+Interest CY: ${totals_by_year[cy]['INT']:,.0f}
+
+Depreciation PY: ${totals_by_year[py]['DEP']:,.0f}
+Interest PY: ${totals_by_year[py]['INT']:,.0f}
+
+--- SOCF ---
+Principal CY: ${cf_by_year[cy]['PRIN']:,.0f}
+Interest CY: ${cf_by_year[cy]['INT']:,.0f}
+
+Principal PY: ${cf_by_year[py]['PRIN']:,.0f}
+Interest PY: ${cf_by_year[py]['INT']:,.0f}
+
+--- Descriptive Notes ---
 59(a): {para59a}
 59(b): {para59b}
 59(c): {para59c}
 59(d): {para59d}
-60A: {para60a}
+60A : {para60a}
 """
-    st.download_button("⬇️ Download Disclosure (TXT)", data=full_txt, file_name=f"IFRS16_Disclosure_{lease_name}.txt")
+
+    st.download_button("⬇️ Download Disclosure (TXT)", data=disclosure_txt, file_name=f"IFRS16_{lease_name}.txt")
