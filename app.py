@@ -87,12 +87,15 @@ payment = st.sidebar.number_input("Monthly Payment", min_value=0.0, value=10000.
 discount_rate = st.sidebar.slider("Discount Rate (%)", 0.0, 100.0, 6.0)
 direct_costs = st.sidebar.number_input("Initial Direct Costs", 0.0, value=0.0)
 incentives = st.sidebar.number_input("Lease Incentives", 0.0, value=0.0)
+residual_value = st.sidebar.number_input("Guaranteed Residual Value", min_value=0.0, value=0.0)
 cpi = st.sidebar.slider("Annual CPI (%)", 0.0, 10.0, 0.0)
 
 # -------------------------- Generate --------------------------
 
 if st.sidebar.button("Generate Lease Model"):
     payments = generate_cpi_adjusted_payments(payment, term_months, cpi)
+if residual_value > 0:
+    payments[-1] += residual_value  # Add RVG to last lease payment
     liability = calculate_lease_liability_from_payments(payments, discount_rate / 100)
     rou_asset = calculate_right_of_use_asset(liability, direct_costs, incentives)
     df, _ = generate_amortization_schedule(start_date, payments, discount_rate / 100, term_months, rou_asset)
@@ -110,6 +113,8 @@ if st.sidebar.button("Generate Lease Model"):
     with tab1:
         st.subheader("📄 Amortization Schedule")
         st.dataframe(df, use_container_width=True)
+        if residual_value > 0:
+        st.markdown(f"**✅ Residual Value Guarantee Included:** ${residual_value:,.0f}")
 
         cy = reporting_date.year
         py = cy - 1
