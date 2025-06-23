@@ -103,7 +103,7 @@ if st.sidebar.button("Generate Lease Model"):
     df["Payment (num)"] = df["Payment"].str.replace(",", "").astype(float)
 
     st.success("✅ Model generated successfully!")
-    tab1, tab2, tab3 = st.tabs(["📘 Disclosures", "📄 Descriptive Notes", "🧪 QA"])
+    tab1, tab2, tab3, tab4 = st.tabs(["📘 Disclosures", "📄 Descriptive Notes", "🧪 QA", "📒 Journal Entries"])
 
     # ---------------------- Tab 1: Disclosures ----------------------
 
@@ -194,6 +194,36 @@ if st.sidebar.button("Generate Lease Model"):
             abs(float(df["Closing Liability"].iloc[-1].replace(',', ''))) < 1 and
             abs(float(df["Right-of-use Asset Closing Balance"].iloc[-1].replace(',', ''))) < 1
         ))
+    # ---------------------- Tab 4: Journal Entries ----------------------
+
+    with tab4:
+        st.subheader("📒 Journal Entries (IFRS 16)")
+
+        st.markdown("#### Initial Recognition")
+        init_je = pd.DataFrame([
+            {"Date": start_date, "Account": "Dr Right-of-use Asset", "Amount": f"${rou_asset:,.0f}"},
+            {"Date": start_date, "Account": "Cr Lease Liability", "Amount": f"${liability:,.0f}"}
+        ])
+        st.dataframe(init_je)
+
+        st.markdown("#### Monthly Lease Entries")
+        monthly_entries = []
+        for _, row in df.iterrows():
+            entry_date = row["Date"]
+            monthly_entries.extend([
+                {"Date": entry_date, "Account": "Dr Depreciation Expense", "Amount": f"${row['Depreciation']}"},
+                {"Date": entry_date, "Account": "Dr Interest Expense", "Amount": f"${row['Interest']}"},
+                {"Date": entry_date, "Account": "Cr Bank / Payables", "Amount": f"${row['Payment']}"}
+            ])
+
+        journal_df = pd.DataFrame(monthly_entries)
+        st.dataframe(journal_df, use_container_width=True)
+
+        st.download_button(
+            label="⬇️ Download Journal Entries (CSV)",
+            data=journal_df.to_csv(index=False),
+            file_name=f"{lease_name}_journal_entries.csv"
+        )
 
     # ---------------------- Export Button ----------------------
 
