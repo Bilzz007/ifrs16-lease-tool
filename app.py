@@ -54,13 +54,19 @@ def generate_amortization_schedule(start_date, payment, rate, term_months, rou_a
 st.set_page_config(page_title="IFRS 16 - Leases", layout="wide")
 st.title("📘 IFRS 16 – Leases")
 
-st.info(
-    "👋 **Welcome to the IFRS 16 – Leases Model Tool!**\n\n"
-    "Use the panel on the **left sidebar** to enter your lease details (like asset class, term, payments, discount rate, etc.).\n\n"
-    "Then, click the **'Generate Lease Model'** button to view amortization schedules, journal entries, and summaries.\n\n"
-    "📘 [Click here to view the full IFRS 16 standard](https://github.com/bilzz007/ifrs16-lease-tool/blob/main/ifrs-16-leases.pdf)"
-)
+st.info("""👋 **Welcome to the IFRS 16 – Leases Model Tool!**
 
+Use the panel on the **left sidebar** to enter your lease details (like asset class, term, payments, discount rate, etc.).
+
+Then, click the **'Generate Lease Model'** button to view amortization schedules, journal entries, and summaries.
+
+📘 [Click here to view the full IFRS 16 standard](https://github.com/bilzz007/ifrs16-lease-tool/blob/main/ifrs-16-leases.pdf)
+""")
+
+Use the panel on the **left sidebar** to enter your lease details (like asset class, term, payments, discount rate, etc.).
+
+Then, click the **'Generate Lease Model'** button to view amortization schedules, journal entries, and summaries.
+""")
 
 st.sidebar.header("Lease Inputs")
 lease_name = st.sidebar.text_input("Lease Name", "Lease A")
@@ -146,3 +152,29 @@ if st.sidebar.button("Generate Lease Model"):
         test_results = run_qa_checks(schedule_df)
         for result in test_results:
             st.markdown(f"- {result}")
+
+# --- IFRS 16 Reference Section ---
+st.markdown("---")
+st.subheader("📘 Full IFRS 16 Standard (Reference)")
+
+show_reference = st.checkbox("Show full IFRS 16 standard", value=False)
+
+if show_reference:
+    import pandas as pd
+
+    @st.cache_data
+    def load_ifrs_sections():
+        return pd.read_csv("ifrs16_sections.csv")
+
+    df_ifrs = load_ifrs_sections()
+
+    search_term = st.text_input("🔍 Search the standard (by keyword, section number, or appendix)")
+
+    if search_term:
+        filtered = df_ifrs[df_ifrs["Section"].str.contains(search_term, case=False, na=False) | df_ifrs["Content"].str.contains(search_term, case=False, na=False)]
+    else:
+        filtered = df_ifrs
+
+    for _, row in filtered.iterrows():
+        with st.expander(row["Section"]):
+            st.markdown(row["Content"].replace("\n", "\n\n"))
