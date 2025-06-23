@@ -62,6 +62,20 @@ Then, click the **'Generate Lease Model'** button to view amortization schedules
 
 
 """)
+import csv
+
+if st.checkbox("📖 Show full IFRS 16 standard"):
+    with open("ifrs16_sections.csv", "r", encoding="utf-8") as file:
+        reader = csv.reader(file)
+        next(reader)  # skip header
+        current_section = ""
+        for row in reader:
+            section, paragraph, text = row
+            if section != current_section:
+                current_section = section
+                st.markdown(f"---\n### 📘 {section}")
+            with st.expander(f"¶ {paragraph}"):
+                st.markdown(text)
 
 st.sidebar.header("Lease Inputs")
 lease_name = st.sidebar.text_input("Lease Name", "Lease A")
