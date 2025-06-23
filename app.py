@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 from datetime import datetime
@@ -46,7 +47,6 @@ def generate_amortization_schedule(start_date, payment, rate, term_months, rou_a
             "Interest": f"{interest:,.0f}",
             "Principal": f"{principal:,.0f}",
             "Closing Liability": f"{liability:,.0f}",
-            "Depreciation": f"{depreciation:,.0f}",
             "Right-of-use Asset Closing Balance": f"{rou_closing:,.0f}"
         })
     return pd.DataFrame(schedule), rou_asset
@@ -59,29 +59,10 @@ st.info("""👋 **Welcome to the IFRS 16 – Leases Model Tool!**
 Use the panel on the **left sidebar** to enter your lease details (like asset class, term, payments, discount rate, etc.).
 
 Then, click the **'Generate Lease Model'** button to view amortization schedules, journal entries, and summaries.
+
+📘 [Click here to view the full IFRS 16 standard](https://github.com/bilzz007/ifrs16-lease-tool/blob/main/ifrs-16-leases.pdf)
 """)
 
-Use the panel on the **left sidebar** to enter your lease details (like asset class, term, payments, discount rate, etc.).
-
-Then, click the **'Generate Lease Model'** button to view amortization schedules, journal entries, and summaries.
-""")
-
-import csv
-
-# Add this checkbox after st.info block
-if st.checkbox("📖 Show full IFRS 16 standard"):
-    with open("ifrs16_sections.csv", "r", encoding="utf-8") as file:
-        reader = csv.reader(file)
-        next(reader)  # skip header
-        current_section = ""
-        for row in reader:
-            section, paragraph, text = row
-            if section != current_section:
-                current_section = section
-                st.markdown(f"---\n### 📘 {section}")
-            with st.expander(f"¶ {paragraph}"):
-                st.markdown(text)
-                
 st.sidebar.header("Lease Inputs")
 lease_name = st.sidebar.text_input("Lease Name", "Lease A")
 entity = st.sidebar.text_input("Entity", "Entity A")
@@ -134,8 +115,7 @@ if st.sidebar.button("Generate Lease Model"):
         rou_asset = calculate_right_of_use_asset(liability, direct_costs, incentives)
 
         st.subheader("📘 Summary")
-        st.markdown(f"""
-- **Lease:** {lease_name}  
+        st.markdown(f"""- **Lease:** {lease_name}  
 - **Entity:** {entity}  
 - **Location:** {location}  
 - **Asset Class:** {asset_class}  
@@ -166,29 +146,3 @@ if st.sidebar.button("Generate Lease Model"):
         test_results = run_qa_checks(schedule_df)
         for result in test_results:
             st.markdown(f"- {result}")
-
-# --- IFRS 16 Reference Section ---
-st.markdown("---")
-st.subheader("📘 Full IFRS 16 Standard (Reference)")
-
-show_reference = st.checkbox("Show full IFRS 16 standard", value=False)
-
-if show_reference:
-    import pandas as pd
-
-    @st.cache_data
-    def load_ifrs_sections():
-        return pd.read_csv("ifrs16_sections.csv")
-
-    df_ifrs = load_ifrs_sections()
-
-    search_term = st.text_input("🔍 Search the standard (by keyword, section number, or appendix)")
-
-    if search_term:
-        filtered = df_ifrs[df_ifrs["Section"].str.contains(search_term, case=False, na=False) | df_ifrs["Content"].str.contains(search_term, case=False, na=False)]
-    else:
-        filtered = df_ifrs
-
-    for _, row in filtered.iterrows():
-        with st.expander(row["Section"]):
-            st.markdown(row["Content"].replace("\n", "\n\n"))
