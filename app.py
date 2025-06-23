@@ -74,7 +74,6 @@ if st.checkbox("📖 Show full IFRS 16 standard"):
     section, paragraph, text = row[:3]
 else:
     continue  # skip invalid rows
-
             if section != current_section:
                 current_section = section
                 st.markdown(f"---\n### 📘 {section}")
