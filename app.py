@@ -68,14 +68,16 @@ location = st.sidebar.text_input("Location", "Main Office")
 asset_class = st.sidebar.selectbox("Asset Class", ["Building", "Equipment", "Vehicle", "Other"])
 start_date = st.sidebar.date_input("Lease Start Date (for Period Option)", datetime.today())
 
+
 lease_input_mode = st.sidebar.radio("Define Lease Term By:", ["Number of Periods", "Start and End Dates"])
-start_date = st.sidebar.date_input("Lease Start Date (for Period Option)", datetime.today())
 
 if lease_input_mode == "Number of Periods":
+    start_date = st.sidebar.date_input("Lease Start Date")
     period_unit = st.sidebar.selectbox("Period Unit", ["Months", "Quarters", "Years"])
     period_count = st.sidebar.number_input("Number of Periods", min_value=1, value=24)
     term_months = period_count * {"Months": 1, "Quarters": 3, "Years": 12}[period_unit]
 else:
+    start_date = st.sidebar.date_input("Lease Start Date")
     end_date = st.sidebar.date_input("Lease End Date", start_date + relativedelta(months=24))
     term_months = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month)
 payment = st.sidebar.number_input("Monthly Payment", min_value=0.0, value=10000.0)
