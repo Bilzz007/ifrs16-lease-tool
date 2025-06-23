@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
@@ -20,28 +19,35 @@ def generate_amortization_schedule(start_date, payment, rate, n_periods, rou_ass
     depreciation_full = rou_asset / n_periods
     depreciation_first = depreciation_full * first_period_fraction
 
-    total_depreciation = 0
+    cumulative_depreciation = 0
     for i in range(n_periods):
         interest = liability * r
         principal = payment - interest
         liability -= principal
+
         depreciation = depreciation_first if i == 0 else depreciation_full
-        total_depreciation += depreciation
-        rou_closing = max(0, rou_asset - total_depreciation)
+        cumulative_depreciation += depreciation
+        rou_closing = round(max(0, rou_asset - cumulative_depreciation), 0)
+
+        # Round liability and clean up "-0"
+        liability_rounded = round(liability, 0)
+        if abs(liability_rounded) < 1:
+            liability_rounded = 0
+
         schedule.append({
             "Period": i + 1,
             "Date": start_date + relativedelta(months=i),
-            "Payment": round(payment, 0),
-            "Interest": round(interest, 0),
-            "Principal": round(principal, 0),
-            "Closing Liability": round(liability, 0),
-            "Depreciation": round(depreciation, 0),
-            "ROU Closing Balance": round(rou_closing, 0)
+            "Payment": f"{payment:,.0f}",
+            "Interest": f"{interest:,.0f}",
+            "Principal": f"{principal:,.0f}",
+            "Closing Liability": f"{liability_rounded:,.0f}",
+            "Depreciation": f"{depreciation:,.0f}",
+            "ROU Closing Balance": f"{rou_closing:,.0f}"
         })
     return pd.DataFrame(schedule), rou_asset
 
-st.set_page_config(page_title="IFRS 16 Lease Model", layout="wide")
-st.title("📘 IFRS 16 Lease Model Tool")
+st.set_page_config(page_title="IFRS 16 Lease Model v2", layout="wide")
+st.title("📘 IFRS 16 Lease Model Tool — v2")
 
 st.sidebar.header("Lease Inputs")
 lease_name = st.sidebar.text_input("Lease Name", "Lease A")
@@ -86,10 +92,7 @@ if st.sidebar.button("Generate Lease Model"):
 
         st.subheader("📄 Amortization Schedule")
         schedule_df, _ = generate_amortization_schedule(start_date, payment, discount_rate / 100, term_months, rou_asset)
-        schedule_df_display = schedule_df.copy()
-        for col in ["Payment", "Interest", "Principal", "Closing Liability", "Depreciation", "ROU Closing Balance"]:
-            schedule_df_display[col] = schedule_df_display[col].apply(lambda x: f"{x:,.0f}")
-        st.dataframe(schedule_df_display)
+        st.dataframe(schedule_df)
 
         st.subheader("📘 Summary")
         st.markdown(f"""
