@@ -56,7 +56,6 @@ def generate_amortization_schedule(start_date, payment, rate, term_months, rou_a
 st.set_page_config(page_title="IFRS 16 - Leases", layout="wide")
 st.title("📘 IFRS 16 – Leases")
 
-# ✅ Corrected instruction box with triple quotes
 st.info("""👋 **Welcome to the IFRS 16 – Leases Model Tool!**
 
 Use the panel on the **left sidebar** to enter your lease details (like asset class, term, payments, discount rate, etc.).
@@ -104,10 +103,11 @@ if st.sidebar.button("Generate Lease Model"):
         liability = calculate_lease_liability(payment, discount_rate / 100, term_months)
         rou_asset = calculate_right_of_use_asset(liability, direct_costs, incentives)
 
-        st.markdown(f"""
-<b>Initial Lease Liability:</b> ${liability:,.0f}<br>
-<b>Initial Right-of-use Asset:</b> ${rou_asset:,.0f}
-""", unsafe_allow_html=True)
+        st.markdown(
+            f"""<b>Initial Lease Liability:</b> ${liability:,.0f}<br>
+<b>Initial Right-of-use Asset:</b> ${rou_asset:,.0f}""",
+            unsafe_allow_html=True
+        )
 
         st.subheader("📄 Amortization Schedule (Daily Depreciation)")
         schedule_df, _ = generate_amortization_schedule(start_date, payment, discount_rate / 100, term_months, rou_asset)
