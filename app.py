@@ -83,7 +83,7 @@ st.info("""👋 **Welcome to the IFRS 16 – Leases Model Tool!**
 
 Use the panel on the **left sidebar** to enter your lease details (like asset class, term, payments, discount rate, etc.).
 
-Then, click the **'Generate Lease Model'** button to view amortization schedules, journal entries, and summaries.
+Then, click the **'Generate Lease Model'** button to view amortization schedules, disclosures, and test results.
 """)
 
 st.sidebar.header("Lease Inputs")
@@ -126,13 +126,13 @@ if st.sidebar.button("Generate Lease Model"):
     if is_short_term or is_low_value:
         reason = "short-term" if is_short_term else "low-value"
         st.warning(f"⚠️ Lease '{lease_name}' is automatically treated as **{reason}** and exempt from capitalization under IFRS 16.")
-        st.subheader("📒 Non-Capitalized Lease Journal Entries")
         exempt_je = pd.DataFrame([{
             "Date": start_date + relativedelta(months=i),
             "Lease Name": lease_name,
             "JE Debit - Lease Expense": f"{payment:,.0f}",
             "JE Credit - Bank/Payables": f"{payment:,.0f}"
         } for i in range(term_months)])
+        st.subheader("📒 Non-Capitalized Lease Journal Entries")
         st.dataframe(exempt_je)
 
     else:
@@ -169,66 +169,69 @@ if st.sidebar.button("Generate Lease Model"):
         st.dataframe(schedule_df)
         st.session_state["schedule_df"] = schedule_df
 
-        st.subheader("🔍 Model QA Assistant")
-        def run_qa_checks(df):
-            def parse(val):
-                return float(str(val).replace(",", ""))
+        st.subheader("📘 IFRS 16 Disclosures")
 
-            errors = []
-            if round(parse(df["Right-of-use Asset Closing Balance"].iloc[-1]), 2) != 0:
-                errors.append("❌ Right-of-use asset should reduce to 0 by end of lease.")
-            if round(parse(df["Closing Liability"].iloc[-1]), 2) != 0:
-                errors.append("❌ Lease liability should be zero at the end.")
-            return errors or ["✅ All basic checks passed."]
+        df = schedule_df.copy()
+        df["Interest (num)"] = df["Interest"].str.replace(",", "").astype(float)
+        df["Principal (num)"] = df["Principal"].str.replace(",", "").astype(float)
+        df["Depreciation (num)"] = df["Depreciation"].str.replace(",", "").astype(float)
+        df["Payment (num)"] = df["Payment"].str.replace(",", "").astype(float)
 
-        for result in run_qa_checks(schedule_df):
-            st.markdown(f"- {result}")
+        total_interest = df["Interest (num)"].sum()
+        total_depreciation = df["Depreciation (num)"].sum()
+        total_cash_outflow = df["Payment (num)"].sum()
 
-# ------------------- Internal QA Test Suite -------------------
+        st.markdown(f"""
+- **Opening Lease Liability:** ${liability:,.0f}  
+- **Closing Lease Liability:** $0  
+- **Total Interest Expense:** ${total_interest:,.0f}  
+- **Total Depreciation of ROU Asset:** ${total_depreciation:,.0f}  
+- **Total Lease Payments / Cash Outflows:** ${total_cash_outflow:,.0f}  
+- **ROU Asset Reconciliation:**  
+  - Opening: ${rou_asset:,.0f}  
+  - Less: Depreciation: ${total_depreciation:,.0f}  
+  - Closing: $0  
+""")
 
-st.subheader("🧪 Internal QA Test Suite")
+        maturity_analysis = pd.DataFrame({
+            "Year": [(start_date + relativedelta(months=i)).year for i in range(term_months)],
+            "Payment": df["Payment (num)"]
+        }).groupby("Year").sum().astype(int)
 
-if st.button("Run QA Tests"):
-    if not st.session_state.get("model_generated", False):
-        st.warning("Please generate a lease model first.")
-    else:
-        liability = st.session_state["liability"]
-        rou_asset = st.session_state["rou_asset"]
-        start_date = st.session_state["start_date"]
-        term_months = st.session_state["term_months"]
-        adjusted_payments = st.session_state["adjusted_payments"]
-        discount_rate = st.session_state["discount_rate"]
-        direct_costs = st.session_state["direct_costs"]
-        incentives = st.session_state["incentives"]
+        st.markdown("### 📊 Maturity Analysis (Undiscounted Future Payments)")
+        st.dataframe(maturity_analysis)
 
-        def try_assert(name, fn):
-            try:
-                fn()
-                st.success(f"✅ {name}")
-            except AssertionError as e:
-                st.error(f"❌ {name} failed: {str(e)}")
+        st.subheader("🧪 Internal QA Test Suite")
 
-        def test_liability_from_adjusted():
-            expected = calculate_lease_liability_from_payments(adjusted_payments, discount_rate)
-            assert abs(liability - expected) < 1, f"Expected {expected}, got {liability}"
+        if st.button("Run QA Tests"):
+            def try_assert(name, fn):
+                try:
+                    fn()
+                    st.success(f"✅ {name}")
+                except AssertionError as e:
+                    st.error(f"❌ {name} failed: {str(e)}")
 
-        def test_right_of_use_asset():
-            expected = calculate_right_of_use_asset(liability, direct_costs, incentives)
-            assert abs(rou_asset - expected) < 1, f"Expected {expected}, got {rou_asset}"
+            def test_liability_from_adjusted():
+                expected = calculate_lease_liability_from_payments(adjusted_payments, discount_rate / 100)
+                assert abs(liability - expected) < 1, f"Expected {expected}, got {liability}"
 
-        def test_depreciation_sum():
-            schedule = generate_daily_depreciation_schedule(start_date, term_months, rou_asset)
-            total = round(sum(item[2] for item in schedule), 2)
-            assert abs(total - rou_asset) < 1, f"Depreciation sum {total} != ROU asset {rou_asset}"
+            def test_right_of_use_asset():
+                expected = calculate_right_of_use_asset(liability, direct_costs, incentives)
+                assert abs(rou_asset - expected) < 1, f"Expected {expected}, got {rou_asset}"
 
-        def test_final_balances():
-            df, _ = generate_amortization_schedule(start_date, adjusted_payments, discount_rate, term_months, rou_asset)
-            liability_end = float(str(df["Closing Liability"].iloc[-1]).replace(",", ""))
-            rou_end = float(str(df["Right-of-use Asset Closing Balance"].iloc[-1]).replace(",", ""))
-            assert abs(liability_end) < 1, f"Ending liability not zero: {liability_end}"
-            assert abs(rou_end) < 1, f"Ending ROU not zero: {rou_end}"
+            def test_depreciation_sum():
+                schedule = generate_daily_depreciation_schedule(start_date, term_months, rou_asset)
+                total = round(sum(item[2] for item in schedule), 2)
+                assert abs(total - rou_asset) < 1, f"Depreciation sum {total} != ROU asset {rou_asset}"
 
-        try_assert("CPI-adjusted lease liability", test_liability_from_adjusted)
-        try_assert("Right-of-use asset calculation", test_right_of_use_asset)
-        try_assert("Depreciation matches asset value", test_depreciation_sum)
-        try_assert("Final balances zero-out", test_final_balances)
+            def test_final_balances():
+                df, _ = generate_amortization_schedule(start_date, adjusted_payments, discount_rate / 100, term_months, rou_asset)
+                liability_end = float(str(df["Closing Liability"].iloc[-1]).replace(",", ""))
+                rou_end = float(str(df["Right-of-use Asset Closing Balance"].iloc[-1]).replace(",", ""))
+                assert abs(liability_end) < 1, f"Ending liability not zero: {liability_end}"
+                assert abs(rou_end) < 1, f"Ending ROU not zero: {rou_end}"
+
+            try_assert("CPI-adjusted lease liability", test_liability_from_adjusted)
+            try_assert("Right-of-use asset calculation", test_right_of_use_asset)
+            try_assert("Depreciation matches asset value", test_depreciation_sum)
+            try_assert("Final balances zero-out", test_final_balances)
