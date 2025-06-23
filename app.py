@@ -151,13 +151,26 @@ if st.sidebar.button("Generate Lease Model"):
             st.subheader("📄 Amortization Schedule")
             st.dataframe(df)
 
-            st.subheader("📘 Quantitative Disclosures")
-            st.markdown(f"""
-- ROU Asset: ${rou_asset:,.0f}  
-- Lease Liability Opening: ${liability:,.0f}  
-- Depreciation Expense: ${df["Depreciation (num)"].sum():,.0f}  
-- Interest Expense: ${df["Interest (num)"].sum():,.0f}  
-- Lease Payments Total: ${df["Payment (num)"].sum():,.0f}
+            st.subheader("📘 IFRS 16 Quantitative Disclosures")
+
+st.markdown("### 📄 Statement of Financial Position")
+st.markdown(f"""
+- **Right-of-use Asset (Closing):** $0  
+- **Lease Liability (Closing):** $0  
+- **Lease Liability (Opening):** ${liability:,.0f}
+""")
+
+st.markdown("### 📃 Statement of Profit or Loss")
+st.markdown(f"""
+- **Depreciation Expense on ROU Asset:** ${df["Depreciation (num)"].sum():,.0f}  
+- **Interest Expense on Lease Liability:** ${df["Interest (num)"].sum():,.0f}
+""")
+
+st.markdown("### 💰 Statement of Cash Flows")
+st.markdown(f"""
+- **Total Lease Payments (Cash Outflow):** ${df["Payment (num)"].sum():,.0f}  
+  - Principal Portion: ${df["Principal (num)"].sum():,.0f}  
+  - Interest Portion: ${df["Interest (num)"].sum():,.0f}
 """)
 
             maturity_df = pd.DataFrame({
