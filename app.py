@@ -87,8 +87,13 @@ if use_slider == "Slider":
 else:
     discount_rate = st.sidebar.number_input("Discount Rate (%)", 0.0, 100.0, 6.0, step=0.1)
 
-direct_costs = st.sidebar.number_input("Initial Direct Costs", min_value=0.0, value=0.0)
-incentives = st.sidebar.number_input("Lease Incentives", min_value=0.0, value=0.0)
+
+direct_costs = st.sidebar.number_input(
+    "Initial Direct Costs",
+    min_value=0.0,
+    value=0.0,
+    help="📘 IFRS 16, Paragraph 24(d): The cost of a right-of-use asset shall include any initial direct costs incurred by the lessee.
+These are incremental costs directly attributable to obtaining the lease.
 cpi = st.sidebar.slider("📈 Annual CPI Increase (%)", 0.0, 10.0, 0.0)
 
 LOW_VALUE_THRESHOLD = 5000
