@@ -92,15 +92,8 @@ direct_costs = st.sidebar.number_input(
     "Initial Direct Costs",
     min_value=0.0,
     value=0.0,
-    help="IFRS 16, Paragraph 24(d): Include any initial direct costs incurred by the lessee.
-These are costs directly attributable to obtaining the lease.\nExamples: legal fees, broker commissions, registration charges.\nThese are added to the Right-of-use asset."
-)
-
-incentives = st.sidebar.number_input(
-    "Lease Incentives",
-    min_value=0.0,
-    value=0.0,
-    help="IFRS 16, Paragraph 24(c): Lease payments made at or before commencement date, less any lease incentives received.
+    help="IFRS 16, Paragraph 24(d): Include any initial direct costs incurred by the lessee."
+These are incremental costs directly attributable to obtaining the lease.
 cpi = st.sidebar.slider("📈 Annual CPI Increase (%)", 0.0, 10.0, 0.0)
 
 LOW_VALUE_THRESHOLD = 5000
