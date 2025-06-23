@@ -7,7 +7,7 @@ def calculate_lease_liability(payment, rate, n_periods):
     r = rate / 12
     return round(payment * (1 - (1 + r) ** -n_periods) / r, 2)
 
-def calculate_rou_asset(liability, direct_costs=0, incentives=0):
+def calculate_right_of_use_asset(liability, direct_costs=0, incentives=0):
     return round(liability + direct_costs - incentives, 2)
 
 def generate_daily_depreciation_schedule(start_date, term_months, rou_asset):
@@ -16,7 +16,6 @@ def generate_daily_depreciation_schedule(start_date, term_months, rou_asset):
     daily_depreciation = rou_asset / total_days
     schedule = []
 
-    current_date = start_date
     cumulative_depr = 0
     for i in range(term_months):
         month_start = start_date + relativedelta(months=i)
@@ -50,12 +49,12 @@ def generate_amortization_schedule(start_date, payment, rate, term_months, rou_a
             "Principal": f"{principal:,.0f}",
             "Closing Liability": f"{liability:,.0f}",
             "Depreciation": f"{depreciation:,.0f}",
-            "ROU Closing Balance": f"{rou_closing:,.0f}"
+            "Right-of-use Asset Closing Balance": f"{rou_closing:,.0f}"
         })
     return pd.DataFrame(schedule), rou_asset
 
-st.set_page_config(page_title="IFRS 16 Lease Model v4", layout="wide")
-st.title("📘 IFRS 16 Lease Model Tool — v4 (Daily Depreciation)")
+st.set_page_config(page_title="IFRS 16 Lease Model v5", layout="wide")
+st.title("📘 IFRS 16 Lease Model Tool — v5")
 
 st.sidebar.header("Lease Inputs")
 lease_name = st.sidebar.text_input("Lease Name", "Lease A")
@@ -95,8 +94,13 @@ if st.sidebar.button("Generate Lease Model"):
         st.dataframe(exempt_je)
     else:
         liability = calculate_lease_liability(payment, discount_rate / 100, term_months)
-        rou_asset = calculate_rou_asset(liability, direct_costs, incentives)
-        st.write(f"**Initial Lease Liability:** ${liability:,.0f}  |  **Initial ROU Asset:** ${rou_asset:,.0f}")
+        rou_asset = calculate_right_of_use_asset(liability, direct_costs, incentives)
+
+        # Option 1 clean formatting
+        st.markdown(f"""
+**Initial Lease Liability:** ${liability:,.0f}  
+**Initial Right-of-use Asset:** ${rou_asset:,.0f}
+""")
 
         st.subheader("📄 Amortization Schedule (Daily Depreciation)")
         schedule_df, _ = generate_amortization_schedule(start_date, payment, discount_rate / 100, term_months, rou_asset)
