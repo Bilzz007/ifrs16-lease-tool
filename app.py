@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 
 def calculate_lease_liability(payment, rate, n_periods):
@@ -10,44 +10,52 @@ def calculate_lease_liability(payment, rate, n_periods):
 def calculate_rou_asset(liability, direct_costs=0, incentives=0):
     return round(liability + direct_costs - incentives, 2)
 
-def generate_amortization_schedule(start_date, payment, rate, n_periods, rou_asset):
+def generate_daily_depreciation_schedule(start_date, term_months, rou_asset):
+    end_date = start_date + relativedelta(months=term_months)
+    total_days = (end_date - start_date).days
+    daily_depreciation = rou_asset / total_days
     schedule = []
-    liability = calculate_lease_liability(payment, rate, n_periods)
+
+    current_date = start_date
+    cumulative_depr = 0
+    for i in range(term_months):
+        month_start = start_date + relativedelta(months=i)
+        month_end = month_start + relativedelta(months=1)
+        days_in_month = (month_end - month_start).days
+        depreciation = round(daily_depreciation * days_in_month, 2)
+        cumulative_depr += depreciation
+        rou_balance = round(rou_asset - cumulative_depr, 2)
+        if i == term_months - 1:
+            rou_balance = 0  # force zero in last month
+        schedule.append((i + 1, month_start, depreciation, rou_balance))
+    return schedule
+
+def generate_amortization_schedule(start_date, payment, rate, term_months, rou_asset):
+    schedule = []
+    liability = calculate_lease_liability(payment, rate, term_months)
     r = rate / 12
-    actual_day = start_date.day
-    first_period_fraction = (30 - actual_day + 1) / 30 if actual_day > 1 else 1
-    depreciation_full = rou_asset / n_periods
-    depreciation_first = depreciation_full * first_period_fraction
 
-    cumulative_depreciation = 0
-    for i in range(n_periods):
-        interest = liability * r
-        principal = payment - interest
+    depr_schedule = generate_daily_depreciation_schedule(start_date, term_months, rou_asset)
+    for i in range(term_months):
+        interest = round(liability * r, 2)
+        principal = round(payment - interest, 2)
         liability -= principal
-
-        depreciation = depreciation_first if i == 0 else depreciation_full
-        cumulative_depreciation += depreciation
-        rou_closing = round(max(0, rou_asset - cumulative_depreciation), 0)
-
-        # Round liability and clean up "-0"
-        liability_rounded = round(liability, 0)
-        if abs(liability_rounded) < 1:
-            liability_rounded = 0
-
+        liability = 0 if abs(liability) < 1 else round(liability, 2)
+        period, date, depreciation, rou_closing = depr_schedule[i]
         schedule.append({
-            "Period": i + 1,
-            "Date": start_date + relativedelta(months=i),
+            "Period": period,
+            "Date": date,
             "Payment": f"{payment:,.0f}",
             "Interest": f"{interest:,.0f}",
             "Principal": f"{principal:,.0f}",
-            "Closing Liability": f"{liability_rounded:,.0f}",
+            "Closing Liability": f"{liability:,.0f}",
             "Depreciation": f"{depreciation:,.0f}",
             "ROU Closing Balance": f"{rou_closing:,.0f}"
         })
     return pd.DataFrame(schedule), rou_asset
 
-st.set_page_config(page_title="IFRS 16 Lease Model v2", layout="wide")
-st.title("📘 IFRS 16 Lease Model Tool — v2")
+st.set_page_config(page_title="IFRS 16 Lease Model v4", layout="wide")
+st.title("📘 IFRS 16 Lease Model Tool — v4 (Daily Depreciation)")
 
 st.sidebar.header("Lease Inputs")
 lease_name = st.sidebar.text_input("Lease Name", "Lease A")
@@ -90,7 +98,7 @@ if st.sidebar.button("Generate Lease Model"):
         rou_asset = calculate_rou_asset(liability, direct_costs, incentives)
         st.write(f"**Initial Lease Liability:** ${liability:,.0f}  |  **Initial ROU Asset:** ${rou_asset:,.0f}")
 
-        st.subheader("📄 Amortization Schedule")
+        st.subheader("📄 Amortization Schedule (Daily Depreciation)")
         schedule_df, _ = generate_amortization_schedule(start_date, payment, discount_rate / 100, term_months, rou_asset)
         st.dataframe(schedule_df)
 
