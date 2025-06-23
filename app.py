@@ -87,11 +87,11 @@ for i in range(num_leases):
 
             
             if submitted:
-                collapse_sidebar()
                 is_short_term = term_months < 12
                 is_low_value = payment < LOW_VALUE_THRESHOLD
 
                 
+
                 if is_short_term or is_low_value:
                     reasons = []
                     if is_short_term:
@@ -99,8 +99,17 @@ for i in range(num_leases):
                     if is_low_value:
                         reasons.append("low-value")
                     reason_text = " and ".join(reasons)
-
                     st.warning(f"⚠️ Lease '{lease_name}' is treated as {reason_text} and exempt from capitalization under IFRS 16.")
+                    exempt_je = pd.DataFrame([{
+                        "Date": start_date + relativedelta(months=i),
+                        "Lease Name": lease_name,
+                        "JE Debit - Lease Expense": f"{payment:,.0f}",
+                        "JE Credit - Bank/Payables": f"{payment:,.0f}"
+                    } for i in range(term_months)])
+                    st.subheader("📒 Non-Capitalized Lease Journal Entries")
+                    st.dataframe(exempt_je)
+                    continue
+
 
                     reason = "short-term" if is_short_term else "low-value"
                     st.warning(f"⚠️ Lease '{lease_name}' is treated as **{reason}** and exempt from capitalization under IFRS 16.")
