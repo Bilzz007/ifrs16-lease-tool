@@ -2,6 +2,7 @@ import pandas as pd
 
 def run_tests_on_schedule(df):
     errors = []
+    errors.append("❌ Simulated failure for testing.")
 
     try:
         if df["Right-of-use Asset Closing Balance"].iloc[-1] != "0":
