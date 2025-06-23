@@ -51,23 +51,17 @@ def generate_amortization_schedule(start_date, payment, rate, term_months, rou_a
         })
     return pd.DataFrame(schedule), rou_asset
 
+# UI layout
 st.set_page_config(page_title="IFRS 16 - Leases", layout="wide")
-
-# Sidebar control
 if "sidebar_expanded" not in st.session_state:
     st.session_state.sidebar_expanded = True
 
 def collapse_sidebar():
     st.session_state.sidebar_expanded = False
 
-st.title("📘 IFRS 16 – Leases")
+st.title("📘 IFRS 16 – Lease Model with Reassessment")
 
-st.info("""👋 **Welcome to the IFRS 16 – Leases Model Tool!**
-
-Use the panel on the **left sidebar** to enter your lease details (like asset class, term, payments, discount rate, etc.).
-
-Then, click the **'Generate Lease Model'** button to view amortization schedules, journal entries, and summaries.
-""")
+st.info("Use the sidebar to enter lease details. After generating, you can optionally apply reassessment/modification.")
 
 LOW_VALUE_THRESHOLD = 5000
 
@@ -77,17 +71,14 @@ if st.session_state.sidebar_expanded:
     entity = st.sidebar.text_input("Entity", "Entity A")
     location = st.sidebar.text_input("Location", "Main Office")
     asset_class = st.sidebar.selectbox("Asset Class", ["Building", "Equipment", "Vehicle", "Other"])
-    start_date = st.sidebar.date_input("Lease Start Date (for Period Option)", datetime.today())
+    start_date = st.sidebar.date_input("Lease Start Date", datetime.today())
 
     lease_input_mode = st.sidebar.radio("Define Lease Term By:", ["Number of Periods", "Start and End Dates"])
-
     if lease_input_mode == "Number of Periods":
-        start_date = st.sidebar.date_input("Lease Start Date")
         period_unit = st.sidebar.selectbox("Period Unit", ["Months", "Quarters", "Years"])
         period_count = st.sidebar.number_input("Number of Periods", min_value=1, value=24)
         term_months = period_count * {"Months": 1, "Quarters": 3, "Years": 12}[period_unit]
     else:
-        start_date = st.sidebar.date_input("Lease Start Date")
         end_date = st.sidebar.date_input("Lease End Date", start_date + relativedelta(months=24))
         term_months = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month)
 
@@ -103,28 +94,29 @@ if st.session_state.sidebar_expanded:
     incentives = st.sidebar.number_input("Lease Incentives", min_value=0.0, value=0.0)
     cpi = st.sidebar.slider("📈 Annual CPI Increase (%)", 0.0, 10.0, 0.0)
 
-    if st.sidebar.button("Generate Lease Model"):
-        collapse_sidebar()
-        is_short_term = term_months < 12
-        is_low_value = payment < LOW_VALUE_THRESHOLD
+    generate_model = st.sidebar.button("Generate Lease Model")
+if generate_model:
+    collapse_sidebar()
+    is_short_term = term_months < 12
+    is_low_value = payment < LOW_VALUE_THRESHOLD
 
-        if is_short_term or is_low_value:
-            reason = "short-term" if is_short_term else "low-value"
-            st.warning(f"⚠️ Lease '{lease_name}' is automatically treated as **{reason}** and exempt from capitalization under IFRS 16.")
-            st.subheader("📒 Non-Capitalized Lease Journal Entries")
-            exempt_je = pd.DataFrame([{
-                "Date": start_date + relativedelta(months=i),
-                "Lease Name": lease_name,
-                "JE Debit - Lease Expense": f"{payment:,.0f}",
-                "JE Credit - Bank/Payables": f"{payment:,.0f}"
-            } for i in range(term_months)])
-            st.dataframe(exempt_je)
-        else:
-            liability = calculate_lease_liability(payment, discount_rate / 100, term_months)
-            rou_asset = calculate_right_of_use_asset(liability, direct_costs, incentives)
+    if is_short_term or is_low_value:
+        reason = "short-term" if is_short_term else "low-value"
+        st.warning(f"⚠️ Lease '{lease_name}' is automatically treated as **{reason}** and exempt from capitalization under IFRS 16.")
+        exempt_je = pd.DataFrame([{
+            "Date": start_date + relativedelta(months=i),
+            "Lease Name": lease_name,
+            "JE Debit - Lease Expense": f"{payment:,.0f}",
+            "JE Credit - Bank/Payables": f"{payment:,.0f}"
+        } for i in range(term_months)])
+        st.subheader("📒 Non-Capitalized Lease Journal Entries")
+        st.dataframe(exempt_je)
+    else:
+        liability = calculate_lease_liability(payment, discount_rate / 100, term_months)
+        rou_asset = calculate_right_of_use_asset(liability, direct_costs, incentives)
 
-            st.subheader("📘 Summary")
-            st.markdown(f"""
+        st.subheader("📘 Summary")
+        st.markdown(f"""
 - **Lease:** {lease_name}  
 - **Entity:** {entity}  
 - **Location:** {location}  
@@ -137,6 +129,38 @@ if st.session_state.sidebar_expanded:
 - **Initial Right-of-use Asset:** ${rou_asset:,.0f}
 """)
 
-            st.subheader("📄 Schedule for Lease Liability and Depreciation")
-            schedule_df, _ = generate_amortization_schedule(start_date, payment, discount_rate / 100, term_months, rou_asset)
-            st.dataframe(schedule_df)
+        st.subheader("📄 Schedule for Lease Liability and Depreciation")
+        schedule_df, _ = generate_amortization_schedule(start_date, payment, discount_rate / 100, term_months, rou_asset)
+        st.dataframe(schedule_df)
+
+        # -----------------------------
+        # 🔁 Reassessment Section
+        # -----------------------------
+        st.markdown("---")
+        st.subheader("🔁 Reassessment or Modification")
+
+        if st.checkbox("Apply reassessment or modification?"):
+            effective_date = st.date_input("Effective Date of Change", start_date + relativedelta(months=12))
+            new_payment = st.number_input("New Monthly Payment", min_value=0.0, value=payment)
+            new_discount_rate = st.number_input("New Discount Rate (%)", min_value=0.0, value=discount_rate)
+            new_end_date = st.date_input("New Lease End Date", start_date + relativedelta(months=36))
+
+            new_term_months = (new_end_date.year - effective_date.year) * 12 + (new_end_date.month - effective_date.month)
+
+            classification = "Modification" if (new_term_months != term_months or new_payment != payment) else "Reassessment"
+            st.markdown(f"📌 This qualifies as a **{classification}** under IFRS 16.")
+
+            new_liability = calculate_lease_liability(new_payment, new_discount_rate / 100, new_term_months)
+            new_rou = calculate_right_of_use_asset(new_liability)
+
+            st.markdown("### 📊 Before vs After (at Effective Date)")
+            comparison_df = pd.DataFrame({
+                "Metric": ["Lease Liability", "Right-of-use Asset", "Lease Term (months)", "Monthly Payment", "Discount Rate"],
+                "Before": [f"${liability:,.0f}", f"${rou_asset:,.0f}", f"{term_months}", f"${payment:,.0f}", f"{discount_rate}%"],
+                "After": [f"${new_liability:,.0f}", f"${new_rou:,.0f}", f"{new_term_months}", f"${new_payment:,.0f}", f"{new_discount_rate}%"]
+            })
+            st.dataframe(comparison_df)
+
+            st.markdown("### 📅 Adjusted Amortization Schedule (Post-Change)")
+            adjusted_schedule, _ = generate_amortization_schedule(effective_date, new_payment, new_discount_rate / 100, new_term_months, new_rou)
+            st.dataframe(adjusted_schedule)
