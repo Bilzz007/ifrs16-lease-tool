@@ -26,4 +26,5 @@ jobs:
 
       - name: Run QA Script
         run: |
-          python qa_runner.py
+          python qa_runner_full.py
+
