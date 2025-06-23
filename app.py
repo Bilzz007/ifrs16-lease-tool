@@ -87,6 +87,7 @@ for i in range(num_leases):
 
             
             if submitted:
+                collapse_sidebar()
                 is_short_term = term_months < 12
                 is_low_value = payment < LOW_VALUE_THRESHOLD
 
@@ -99,13 +100,7 @@ for i in range(num_leases):
                         reasons.append("low-value")
                     reason_text = " and ".join(reasons)
 
-                    st.warning(f"⚠️ Lease '{lease_name}' is treated as **{reason_text}** and exempt from capitalization under IFRS 16.")
-
-                    if is_short_term:
-                        st.markdown("*Note 1: As per IFRS 16 para 5(a), a lessee may elect not to recognize a lease if the lease term is 12 months or less and it does not contain a purchase option.*")
-
-                    if is_low_value:
-                        st.markdown("*Note 2: As per IFRS 16 para B8–B10, this exemption applies when the underlying asset is of low value when new. This app uses monthly lease payments as a proxy. Final judgment may require evaluating the asset's value when new.*")
+                    st.warning(f"⚠️ Lease '{lease_name}' is treated as {reason_text} and exempt from capitalization under IFRS 16.")
 
                     reason = "short-term" if is_short_term else "low-value"
                     st.warning(f"⚠️ Lease '{lease_name}' is treated as **{reason}** and exempt from capitalization under IFRS 16.")
