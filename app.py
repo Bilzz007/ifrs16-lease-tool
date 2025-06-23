@@ -52,6 +52,13 @@ def generate_amortization_schedule(start_date, payment, rate, term_months, rou_a
     return pd.DataFrame(schedule), rou_asset
 
 st.set_page_config(page_title="IFRS 16 - Leases", layout="wide")
+
+# Sidebar expand/collapse control
+if "sidebar_expanded" not in st.session_state:
+    st.session_state.sidebar_expanded = True
+
+def collapse_sidebar():
+    st.session_state.sidebar_expanded = False
 st.title("📘 IFRS 16 – Leases")
 
 st.info("""👋 **Welcome to the IFRS 16 – Leases Model Tool!**
@@ -61,11 +68,14 @@ Use the panel on the **left sidebar** to enter your lease details (like asset cl
 Then, click the **'Generate Lease Model'** button to view amortization schedules, journal entries, and summaries.
 """)
 
-st.sidebar.header("Lease Inputs")
+if st.session_state.sidebar_expanded:
+    st.sidebar.header("Lease Inputs")
 lease_name = st.sidebar.text_input("Lease Name", "Lease A")
 entity = st.sidebar.text_input("Entity", "Entity A")
 location = st.sidebar.text_input("Location", "Main Office")
 asset_class = st.sidebar.selectbox("Asset Class", ["Building", "Equipment", "Vehicle", "Other"])
+start_date = st.sidebar.date_input("Lease Start Date (for Period Option)", datetime.today())
+
 
 lease_input_mode = st.sidebar.radio("Define Lease Term By:", ["Number of Periods", "Start and End Dates"])
 
@@ -78,7 +88,6 @@ else:
     start_date = st.sidebar.date_input("Lease Start Date")
     end_date = st.sidebar.date_input("Lease End Date", start_date + relativedelta(months=24))
     term_months = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month)
-
 payment = st.sidebar.number_input("Monthly Payment", min_value=0.0, value=10000.0)
 
 use_slider = st.sidebar.radio("Discount Rate Input Method", ["Slider", "Manual Entry"])
@@ -88,14 +97,14 @@ else:
     discount_rate = st.sidebar.number_input("Discount Rate (%)", 0.0, 100.0, 6.0, step=0.1)
 
 direct_costs = st.sidebar.number_input("Initial Direct Costs", min_value=0.0, value=0.0)
-direct_costs = st.sidebar.number_input(
-    "Initial Direct Costs",
-    min_value=0.0,
-    value=0.0,
-    help="IFRS 16, Paragraph 24(d): Include any initial direct costs incurred by the lessee."
-)
+incentives = st.sidebar.number_input("Lease Incentives", min_value=0.0, value=0.0)
+cpi = st.sidebar.slider("📈 Annual CPI Increase (%)", 0.0, 10.0, 0.0)
+
+LOW_VALUE_THRESHOLD = 5000
+
 if st.sidebar.button("Generate Lease Model"):
-    is_short_term = term_months < 12
+
+    collapse_sidebar()    is_short_term = term_months < 12
     is_low_value = payment < LOW_VALUE_THRESHOLD
 
     if is_short_term or is_low_value:
@@ -130,19 +139,3 @@ if st.sidebar.button("Generate Lease Model"):
         st.subheader("📄 Schedule for Lease Liability and Depreciation")
         schedule_df, _ = generate_amortization_schedule(start_date, payment, discount_rate / 100, term_months, rou_asset)
         st.dataframe(schedule_df)
-
-        st.subheader("🔍 Model QA Assistant")
-
-        def run_qa_checks(df):
-            errors = []
-            if df["Right-of-use Asset Closing Balance"].iloc[-1] != "0":
-                errors.append("❌ Right-of-use asset should reduce to 0 by end of lease.")
-            if df["Closing Liability"].iloc[-1] != "0":
-                errors.append("❌ Lease liability should be zero at the end.")
-            if not errors:
-                return ["✅ All basic checks passed."]
-            return errors
-
-        test_results = run_qa_checks(schedule_df)
-        for result in test_results:
-            st.markdown(f"- {result}")
