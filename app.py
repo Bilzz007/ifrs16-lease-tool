@@ -138,7 +138,7 @@ for i in range(num_leases):
                     liability = calculate_lease_liability(payment, discount_rate / 100, term_months)
                     rou_asset = calculate_right_of_use_asset(liability, direct_costs, incentives)
                     st.subheader("📘 Summary (Before Change)")
-                    st.markdown(f"- Lease: {lease_name}  
+                    st.markdown(f"- Lease: {lease_name}")  
 - Entity: {entity}  
 - Term: {term_months} months  
 - Discount Rate: {discount_rate}%  
