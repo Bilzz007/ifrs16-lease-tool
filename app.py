@@ -114,7 +114,7 @@ if residual_value > 0:
         st.subheader("📄 Amortization Schedule")
         st.dataframe(df, use_container_width=True)
         if residual_value > 0:
-        st.markdown(f"**✅ Residual Value Guarantee Included:** ${residual_value:,.0f}")
+    st.markdown(f"**✅ Residual Value Guarantee Included:** ${residual_value:,.0f}")
 
         cy = reporting_date.year
         py = cy - 1
