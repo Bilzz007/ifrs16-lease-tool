@@ -236,8 +236,7 @@ def handle_lease_modification(original_schedule: pd.DataFrame, modification_date
     """
     # Split original schedule into pre/post modification
     pre_mod = original_schedule[original_schedule["Date"] < modification_date]
-    post_mod = original_schedule[original_schedule["Date"] >= modification_date]
-    
+       
     # Calculate carrying amounts at modification date
     if not pre_mod.empty:
         remaining_liability = pre_mod.iloc[-1]["Closing Liability"]
