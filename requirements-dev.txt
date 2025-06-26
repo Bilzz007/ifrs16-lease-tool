@@ -10,9 +10,19 @@ isort
 autoflake
 docformatter
 pylint
+ruff>=0.4.4  # new: fast linter with autofix
 
 # === Type Checking ===
 mypy==1.10.0
+pandas-stubs>=2.2.3  # new: better type support for pandas
+types-python-dateutil
+types-cachetools
+types-colorama
+types-jsonschema
+types-openpyxl
+types-protobuf
+types-pycurl
+types-toml
 
 # === Testing ===
 pytest
