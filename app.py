@@ -14,7 +14,7 @@ from lease_calculations import (
 
 # -------------------------- Streamlit UI --------------------------
 st.set_page_config("IFRS 16 Lease Model", layout="wide")
-st.title("📘 IFRS 16 Lease Model Tool")
+st.title(" IFRS 16 Lease Model Tool")
 st.info("Use the sidebar to input lease details and generate IFRS 16 disclosures.")
 
 # ------------------------ Sidebar Inputs ------------------------
@@ -26,7 +26,7 @@ with st.sidebar:
     entity = st.text_input("Entity", "Entity A")
     location = st.text_input("Location", "Main Office")
     asset_class = st.selectbox("Asset Class", ["Building", "Equipment", "Vehicle", "Other"])
-    reporting_date = st.date_input("📅 Reporting Date", value=date(2025, 12, 31))
+    reporting_date = st.date_input(" Reporting Date", value=date(2025, 12, 31))
 
     # Exemptions
     st.subheader("IFRS 16 Exemptions")
@@ -64,7 +64,7 @@ with st.sidebar:
 # -------------------------- Generate Model --------------------------
 if st.sidebar.button("Generate Lease Model"):
     if low_value_lease or short_term_lease:
-        st.success("✅ Lease qualifies for IFRS 16 exemption")
+        st.success(" Lease qualifies for IFRS 16 exemption")
 
         with st.expander("Exemption Details"):
             st.markdown(f"""
@@ -126,7 +126,7 @@ if st.sidebar.button("Generate Lease Model"):
             st.success(" Model generated successfully!")
             
             # Display results in tabs
-            tab1, tab2, tab3, tab4 = st.tabs(["📘 Disclosures", "📄 Notes", "🧪 QA", "📒 Journals"])
+            tab1, tab2, tab3, tab4 = st.tabs([" Disclosures", " Notes", " QA", " Journals"])
             
             with tab1:
                 st.subheader("Financial Statement Disclosures")
@@ -235,7 +235,7 @@ if st.sidebar.button("Generate Lease Model"):
                 
                 # Download option
                 st.download_button(
-                    label="📥 Download Journal Entries (CSV)",
+                    label="Download Journal Entries (CSV)",
                     data=df.to_csv(index=False),
                     file_name=f"{lease_name}_journal_entries.csv",
                     mime="text/csv"
@@ -246,7 +246,7 @@ if st.sidebar.button("Generate Lease Model"):
             st.stop()
 
 # -------------------------- Documentation --------------------------
-with st.expander("ℹ️ IFRS 16 Reference"):
+with st.expander(" IFRS 16 Reference"):
     st.markdown("""
     **Key Requirements:**
     - All leases > 12 months and > $5k USD must be capitalized (IFRS 16.9)
