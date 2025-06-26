@@ -9,7 +9,6 @@ on:
 jobs:
   quality:
     runs-on: ubuntu-latest
-
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v3
@@ -33,16 +32,15 @@ jobs:
       - name: 🔀 Isort (sort imports)
         run: isort .
 
-      - name: 🛠 Docformatter (auto-fix docstrings, skip broken files)
+      - name: 🛠 Docformatter (auto-fix docstrings)
         run: |
           find . -name "*.py" -print0 | xargs -0 -n1 docformatter --in-place || echo "Some files skipped"
 
       - name: 🖤 Black (final formatting pass)
         run: black .
 
-      - name: 🔂 Fallback: Strip trailing whitespace (last-resort cleanup)
-        run: |
-          find . -name "*.py" -exec sed -i 's/[ \t]*$//' {} +
+      - name: 🔂 Strip trailing whitespace
+        run: find . -name "*.py" -exec sed -i 's/[ \t]*$//' {} +
 
       # === CHECKERS ===
       - name: 🔍 Flake8 (lint)
