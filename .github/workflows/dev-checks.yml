@@ -7,28 +7,38 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
+  linting:
     runs-on: ubuntu-latest
 
     steps:
-    - name: 📥 Checkout code
-      uses: actions/checkout@v3
+      - name: 📥 Checkout code
+        uses: actions/checkout@v3
 
-    - name: 🐍 Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
 
-    - name: 📦 Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements-dev.txt
+      - name: 📦 Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+          pip install autoflake isort
 
-    - name: 🧼 Run Black (format check)
-      run: black .
+      - name: 🔧 Auto-remove unused imports and variables
+        run: |
+          autoflake --remove-all-unused-imports --remove-unused-variables -i -r .
 
-    - name: 🔍 Run Flake8 (lint)
-      run: flake8 .
+      - name: 🔃 Sort imports
+        run: |
+          isort .
 
-    - name: 🧠 Run Mypy (type checks)
-      run: mypy .
+      - name: 🧼 Format code with Black
+        run: |
+          black .
+
+      - name: 🔍 Run Flake8 (linting)
+        run: flake8 .
+
+      - name: 🧠 Run Mypy (type checks)
+        run: mypy .
