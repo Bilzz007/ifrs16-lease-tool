@@ -1,6 +1,6 @@
 from lease_calculations import (
     calculate_right_of_use_asset,
-    calculate_lease_liability_from_payments,
+    calculate_lease_liability,
     generate_amortization_schedule,
 )
 from datetime import date
@@ -20,7 +20,7 @@ def run_tests():
     cpi = 3.0
     payments = [round(payment * ((1 + cpi / 100) ** (m // 12)), 2) for m in range(term)]
     rate = 0.05
-    liability = calculate_lease_liability_from_payments(payments, rate)
+    liability = calculate_lease_liability(payments, rate)
     rou = calculate_right_of_use_asset(liability)
     df, _ = generate_amortization_schedule(start, payments, rate, term, rou)
     assert_close(sum(df["Payment"].str.replace(",", "").astype(float)), sum(payments), label="CPI Total Payments")
@@ -34,7 +34,7 @@ def run_tests():
 
     # ---------------------- Test Case 3: Residual Value Guarantee ----------------------
     payments = [1000] * 23 + [1500]  # $500 RVG in final month
-    liability = calculate_lease_liability_from_payments(payments, 0.06)
+    liability = calculate_lease_liability(payments, 0.06)
     rou = calculate_right_of_use_asset(liability)
     df, _ = generate_amortization_schedule(start, payments, 0.06, 24, rou)
     last_payment = float(df.iloc[-1]["Payment"].replace(",", ""))
@@ -43,7 +43,7 @@ def run_tests():
     # ---------------------- Test Case 4: Short-Term Lease (6 Months) ----------------------
     short_term = 6
     payments = [2000] * short_term
-    liability = calculate_lease_liability_from_payments(payments, 0.04)
+    liability = calculate_lease_liability(payments, 0.04)
     rou = calculate_right_of_use_asset(liability)
     df, _ = generate_amortization_schedule(start, payments, 0.04, short_term, rou)
     assert len(df) == 6, "Short-term lease should have 6 rows"
