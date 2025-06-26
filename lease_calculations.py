@@ -174,40 +174,37 @@ def calculate_lease_metrics(df: pd.DataFrame, reporting_date: date) -> Dict[str,
     df["Date"] = pd.to_datetime(df["Date"])
 
     cy_mask = (df["Date"].dt.year == reporting_date.year).astype(bool)
-    py_mask: pd.Series[bool] = df["Date"].dt.year == reporting_date.year - 1
+    py_mask = (df["Date"].dt.year == reporting_date.year - 1).astype(bool)
 
     cy_data = df[cy_mask]
     py_data = df[py_mask]
 
     def liability_maturity(df: pd.DataFrame, ref_date: date) -> Tuple[float, float]:
-        date_series = pd.to_datetime(df["Date"])
-        ref_ts = pd.Timestamp(ref_date)
-        one_year_later = pd.Timestamp(ref_date + relativedelta(years=1))
-
-        mask = (date_series > ref_ts) & (date_series <= one_year_later)
-        current = float(df.loc[mask, "Principal"].sum())
-        non_current = float(df.loc[date_series > one_year_later, "Principal"].sum())
-        return current, non_current
+        one_year_later = ref_date + relativedelta(years=1)
+        mask = (df["Date"] > pd.Timestamp(ref_date)) & (df["Date"] <= pd.Timestamp(one_year_later))
+        current = df[mask]["Principal"].sum()
+        non_current = df[df["Date"] > one_year_later]["Principal"].sum()
+        return float(current), float(non_current)
 
     cy_current, cy_noncurrent = liability_maturity(df, reporting_date)
     py_current, py_noncurrent = liability_maturity(df, reporting_date - relativedelta(years=1))
 
     return {
         "current_year": {
-            "depreciation": cy_data["Depreciation"].sum(),
-            "interest": cy_data["Interest"].sum(),
-            "principal_payments": cy_data["Principal"].sum(),
+            "depreciation": float(cy_data["Depreciation"].sum()),
+            "interest": float(cy_data["Interest"].sum()),
+            "principal_payments": float(cy_data["Principal"].sum()),
             "liability_current": cy_current,
             "liability_noncurrent": cy_noncurrent,
-            "rou_balance": cy_data.iloc[-1]["ROU Balance"] if not cy_data.empty else 0.0
+            "rou_balance": float(cy_data.iloc[-1]["ROU Balance"]) if not cy_data.empty else 0.0
         },
         "prior_year": {
-            "depreciation": py_data["Depreciation"].sum(),
-            "interest": py_data["Interest"].sum(),
-            "principal_payments": py_data["Principal"].sum(),
+            "depreciation": float(py_data["Depreciation"].sum()),
+            "interest": float(py_data["Interest"].sum()),
+            "principal_payments": float(py_data["Principal"].sum()),
             "liability_current": py_current,
             "liability_noncurrent": py_noncurrent,
-            "rou_balance": py_data.iloc[-1]["ROU Balance"] if not py_data.empty else 0.0
+            "rou_balance": float(py_data.iloc[-1]["ROU Balance"]) if not py_data.empty else 0.0
         }
     }
 
