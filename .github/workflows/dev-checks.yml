@@ -24,6 +24,7 @@ jobs:
           pip install -r requirements-dev.txt
           pip install pandas-stubs types-python-dateutil types-cachetools types-colorama types-jsonschema types-openpyxl types-protobuf types-pycurl types-toml
           pip install ruff
+          pip install no-implicit-optional
 
       - name: 🧹 Autoflake cleanup
         run: |
@@ -48,15 +49,7 @@ jobs:
         run: ruff check . --fix
 
       - name: 🛠 Fix Optional defaults (no-implicit-optional)
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: 📦 Install JS-based tools
-        run: npm install -g no-implicit-optional pyright
-
-      - name: 🧠 Apply no-implicit-optional
-        run: npx no-implicit-optional .
+        run: no-implicit-optional .
 
       - name: 🔍 Flake8 (lint)
         run: flake8 .
