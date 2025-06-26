@@ -54,7 +54,7 @@ def run_tests():
     reporting_date = date(2025, 6, 30)
     df["Date"] = pd.to_datetime(df["Date"])
     df["Depreciation (num)"] = df["Depreciation"].str.replace(",", "").astype(float)
-    ytd_dep = df[df["Date"] <= reporting_date]["Depreciation (num)"].sum()
+    ytd_dep = df[df["Date"] <= pd.to_datetime(reporting_date)]["Depreciation (num)"].sum()
     assert ytd_dep > 0, "Depreciation YTD must be non-zero for mid-year report"
 
     print("✅ All tests passed successfully.")
