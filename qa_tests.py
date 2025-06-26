@@ -56,6 +56,42 @@ def run_tests():
     ytd_dep = df[df["Date"] <= pd.to_datetime(reporting_date)]["Depreciation"].sum()
     assert ytd_dep > 0, "Depreciation YTD must be non-zero for mid-year report"
 
+    # ---------------------- Test Case 6: Zero Discount Rate ----------------------
+    payments = [1000] * 12
+    liability = calculate_lease_liability(payments, 0.0)
+    assert_close(liability, sum(payments), label="Zero discount rate liability")
+
+    # ---------------------- Test Case 7: Prepayments ----------------------
+    liability = 12000
+    rou = calculate_right_of_use_asset(liability, direct_costs=500, incentives=0, prepayments=1000)
+    assert_close(rou, 13500, label="ROU with prepayments")
+
+    # ---------------------- Test Case 8: Sum-of-Years Digits Depreciation ----------------------
+    from lease_calculations import DepreciationMethod
+    rou = 24000
+    term = 6
+    df, _ = generate_lease_schedule(start, [4000]*term, 0.05, term, rou, 
+                                    depreciation_method=DepreciationMethod.SUM_OF_YEARS)
+    assert abs(df["Depreciation"].sum() - rou) < 1, "SOYD should fully depreciate asset"
+
+    # ---------------------- Test Case 9: Double-Declining Depreciation ----------------------
+    df, _ = generate_lease_schedule(start, [4000]*term, 0.05, term, rou, 
+                                    depreciation_method=DepreciationMethod.DOUBLE_DECLINING)
+    assert abs(df["Depreciation"].sum() - rou) < 1, "Double-declining should fully depreciate asset"
+
+    # ---------------------- Test Case 10: Input Validation ----------------------
+    try:
+        calculate_right_of_use_asset(-1000)
+        assert False, "Negative liability should raise error"
+    except ValueError:
+        pass
+
+    try:
+        calculate_lease_liability([], 0.05)
+        assert False, "Empty payments list should raise error"
+    except ValueError:
+        pass
+
     print("✅ All tests passed successfully.")
 
 if __name__ == "__main__":
