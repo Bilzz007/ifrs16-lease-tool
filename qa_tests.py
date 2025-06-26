@@ -23,7 +23,7 @@ def run_tests():
     liability = calculate_lease_liability(payments, rate)
     rou = calculate_right_of_use_asset(liability)
     df, _ = generate_lease_schedule(start, payments, rate, term, rou)
-    assert_close(sum(df["Payment"].str.replace(",", "").astype(float)), sum(payments), label="CPI Total Payments")
+    assert_close(sum(df["Payment"]), sum(payments), label="CPI Total Payments")
 
     # ---------------------- Test Case 2: Incentives and Direct Costs ----------------------
     liability = 10000
@@ -37,7 +37,7 @@ def run_tests():
     liability = calculate_lease_liability(payments, 0.06)
     rou = calculate_right_of_use_asset(liability)
     df, _ = generate_lease_schedule(start, payments, 0.06, 24, rou)
-    last_payment = float(df.iloc[-1]["Payment"].replace(",", ""))
+    last_payment = df.iloc[-1]["Payment"]
     assert_close(last_payment, 1500, label="RVG included in final payment")
 
     # ---------------------- Test Case 4: Short-Term Lease (6 Months) ----------------------
@@ -47,14 +47,13 @@ def run_tests():
     rou = calculate_right_of_use_asset(liability)
     df, _ = generate_lease_schedule(start, payments, 0.04, short_term, rou)
     assert len(df) == 6, "Short-term lease should have 6 rows"
-    assert_close(float(df.iloc[-1]["Closing Liability"].replace(",", "")), 0, label="Short lease liability zero")
-    assert_close(float(df.iloc[-1]["Right-of-use Asset Closing Balance"].replace(",", "")), 0, label="Short lease ROU zero")
+    assert_close(df.iloc[-1]["Closing Liability"], 0, label="Short lease liability zero")
+    assert_close(df.iloc[-1]["ROU Balance"], 0, label="Short lease ROU zero")
 
     # ---------------------- Test Case 5: Custom Reporting Date ----------------------
     reporting_date = date(2025, 6, 30)
     df["Date"] = pd.to_datetime(df["Date"])
-    df["Depreciation (num)"] = df["Depreciation"].str.replace(",", "").astype(float)
-    ytd_dep = df[df["Date"] <= pd.to_datetime(reporting_date)]["Depreciation (num)"].sum()
+    ytd_dep = df[df["Date"] <= pd.to_datetime(reporting_date)]["Depreciation"].sum()
     assert ytd_dep > 0, "Depreciation YTD must be non-zero for mid-year report"
 
     print("✅ All tests passed successfully.")
