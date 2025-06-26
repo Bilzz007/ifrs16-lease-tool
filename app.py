@@ -192,7 +192,7 @@ if st.sidebar.button("Generate Lease Model"):
                             "the lease term or the asset's useful life in accordance with IFRS 16.31.", height=100)
             
             with tab3:
-                 st.subheader("Quality Assurance Checks")
+                st.subheader("Quality Assurance Checks")
 
                 # Liability check
                 liability_check = abs(df["Closing Liability (num)"].iloc[-1]) < 0.01
