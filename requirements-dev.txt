@@ -23,6 +23,7 @@ types-openpyxl
 types-protobuf
 types-pycurl
 types-toml
+no-implicit-optional  # new: fixes Optional[] typing automatically
 
 # === Testing ===
 pytest
