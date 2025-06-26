@@ -49,7 +49,7 @@ jobs:
         run: ruff check . --fix
 
       - name: 🛠 Fix Optional defaults (no-implicit-optional)
-        run: no-implicit-optional .
+        run: python -m no_implicit_optional .
 
       - name: 🔍 Flake8 (lint)
         run: flake8 .
