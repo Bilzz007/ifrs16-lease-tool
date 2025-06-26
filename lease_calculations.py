@@ -173,7 +173,7 @@ def generate_lease_schedule(
 def calculate_lease_metrics(df: pd.DataFrame, reporting_date: date) -> Dict[str, Dict[str, float]]:
     df["Date"] = pd.to_datetime(df["Date"])
 
-    cy_mask: pd.Series[bool] = df["Date"].dt.year == reporting_date.year
+    cy_mask = (df["Date"].dt.year == reporting_date.year).astype(bool)
     py_mask: pd.Series[bool] = df["Date"].dt.year == reporting_date.year - 1
 
     cy_data = df[cy_mask]
