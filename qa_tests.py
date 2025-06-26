@@ -1,7 +1,7 @@
 from lease_calculations import (
     calculate_right_of_use_asset,
     calculate_lease_liability,
-    generate_amortization_schedule,
+    generate_lease_schedule,
 )
 from datetime import date
 from dateutil.relativedelta import relativedelta
@@ -22,7 +22,7 @@ def run_tests():
     rate = 0.05
     liability = calculate_lease_liability(payments, rate)
     rou = calculate_right_of_use_asset(liability)
-    df, _ = generate_amortization_schedule(start, payments, rate, term, rou)
+    df, _ = generate_lease_schedule(start, payments, rate, term, rou)
     assert_close(sum(df["Payment"].str.replace(",", "").astype(float)), sum(payments), label="CPI Total Payments")
 
     # ---------------------- Test Case 2: Incentives and Direct Costs ----------------------
@@ -36,7 +36,7 @@ def run_tests():
     payments = [1000] * 23 + [1500]  # $500 RVG in final month
     liability = calculate_lease_liability(payments, 0.06)
     rou = calculate_right_of_use_asset(liability)
-    df, _ = generate_amortization_schedule(start, payments, 0.06, 24, rou)
+    df, _ = generate_lease_schedule(start, payments, 0.06, 24, rou)
     last_payment = float(df.iloc[-1]["Payment"].replace(",", ""))
     assert_close(last_payment, 1500, label="RVG included in final payment")
 
@@ -45,7 +45,7 @@ def run_tests():
     payments = [2000] * short_term
     liability = calculate_lease_liability(payments, 0.04)
     rou = calculate_right_of_use_asset(liability)
-    df, _ = generate_amortization_schedule(start, payments, 0.04, short_term, rou)
+    df, _ = generate_lease_schedule(start, payments, 0.04, short_term, rou)
     assert len(df) == 6, "Short-term lease should have 6 rows"
     assert_close(float(df.iloc[-1]["Closing Liability"].replace(",", "")), 0, label="Short lease liability zero")
     assert_close(float(df.iloc[-1]["Right-of-use Asset Closing Balance"].replace(",", "")), 0, label="Short lease ROU zero")
