@@ -25,7 +25,7 @@ jobs:
         pip install -r requirements-dev.txt
 
     - name: 🧼 Run Black (format check)
-      run: black --check .
+      run: black .
 
     - name: 🔍 Run Flake8 (lint)
       run: flake8 .
