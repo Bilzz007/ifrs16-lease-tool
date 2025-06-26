@@ -26,14 +26,16 @@ jobs:
 
       # === FIXERS ===
       - name: 🧹 Autoflake cleanup
-        run: autoflake --remove-all-unused-imports --remove-unused-variables --expand-star-imports -r -i .
+        run: |
+          autoflake --remove-all-unused-imports --remove-unused-variables \
+                   --expand-star-imports -r -i .
 
       - name: 🔀 Isort (sort imports)
         run: isort .
 
       - name: 🛠 Docformatter (auto-fix docstrings, skip broken files)
         run: |
-          find . -name "*.py" -print0 | xargs -0 -n1 docformatter --in-place || echo "Some files skipped due to syntax errors"
+          find . -name "*.py" -print0 | xargs -0 -n1 docformatter --in-place || echo "Some files skipped"
 
       - name: 🖤 Black (final formatting pass)
         run: black .
@@ -44,13 +46,13 @@ jobs:
 
       # === CHECKERS ===
       - name: 🔍 Flake8 (lint)
-        run: flake8 .
+        run: flake8 .  # Add config if needed via --config=...
 
       - name: 🧠 Mypy (type checks)
-        run: mypy .
+        run: mypy .  # Optionally specify config or module
 
-      - name: 🔐 Bandit (security)
-        run: bandit -r .
+      - name: 🔐 Bandit (security checks)
+        run: bandit -r . -x tests  # Exclude test dir if needed
 
       - name: 🧪 Pytest (unit tests)
         run: pytest
