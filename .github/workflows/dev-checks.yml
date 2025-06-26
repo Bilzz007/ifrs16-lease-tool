@@ -38,6 +38,10 @@ jobs:
       - name: 🖤 Black (final formatting pass)
         run: black .
 
+      - name: 🔂 Fallback: Strip trailing whitespace (last-resort cleanup)
+        run: |
+          find . -name "*.py" -exec sed -i 's/[ \t]*$//' {} +
+
       # === CHECKERS ===
       - name: 🔍 Flake8 (lint)
         run: flake8 .
