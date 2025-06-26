@@ -23,12 +23,10 @@ def calculate_right_of_use_asset(
     incentives: float = 0,
     prepayments: float = 0
 ) -> float:
-    # Explicit conversion to float before comparison
-    amounts = [float(liability), float(direct_costs), 
-               float(incentives), float(prepayments)]
+    amounts = [float(liability), float(direct_costs), float(incentives), float(prepayments)]
     if any(x < 0 for x in amounts):
         raise ValueError("All financial inputs must be non-negative")
-    return round(sum(amounts), 2)
+    return round(liability + direct_costs - incentives + prepayments, 2)
 
 
 def generate_variable_payments(
@@ -182,10 +180,13 @@ def calculate_lease_metrics(df: pd.DataFrame, reporting_date: date) -> Dict[str,
     py_data = df[py_mask]
 
     def liability_maturity(df: pd.DataFrame, ref_date: date) -> Tuple[float, float]:
-        one_year_later = ref_date + relativedelta(years=1)
-        mask = (df["Date"] > pd.Timestamp(ref_date)) & (df["Date"] <= pd.Timestamp(one_year_later))
-        current = df[mask]["Principal"].sum()
-        non_current = df[df["Date"] > one_year_later]["Principal"].sum()
+        date_series = pd.to_datetime(df["Date"])
+        ref_ts = pd.Timestamp(ref_date)
+        one_year_later = pd.Timestamp(ref_date + relativedelta(years=1))
+
+        mask = (date_series > ref_ts) & (date_series <= one_year_later)
+        current = float(df.loc[mask, "Principal"].sum())
+        non_current = float(df.loc[date_series > one_year_later, "Principal"].sum())
         return current, non_current
 
     cy_current, cy_noncurrent = liability_maturity(df, reporting_date)
