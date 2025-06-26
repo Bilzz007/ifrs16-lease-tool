@@ -47,25 +47,57 @@ incentives = st.sidebar.number_input("Lease Incentives", 0.0, value=0.0)
 residual_value = st.sidebar.number_input("Guaranteed Residual Value", min_value=0.0, value=0.0)
 cpi = st.sidebar.slider("Annual CPI (%)", 0.0, 10.0, 0.0)
 
+# -------------------------- Exemption Detection --------------------------
+
+LOW_VALUE_THRESHOLD = 5000
+is_short_term = term_months <= 12 and residual_value == 0
+is_low_value = payment < LOW_VALUE_THRESHOLD and asset_class != 'Building'
+is_exempt = is_short_term or is_low_value
+
 # -------------------------- Generate Model --------------------------
 
 if st.sidebar.button("Generate Lease Model"):
-    payments = generate_cpi_adjusted_payments(payment, term_months, cpi)
-    if residual_value > 0:
-        payments[-1] += residual_value
+    if is_exempt:
+        st.warning("⚠️ This lease qualifies for a practical expedient under IFRS 16. No ROU asset or lease liability is recognized.")
 
-    liability = calculate_lease_liability_from_payments(payments, discount_rate / 100)
-    rou_asset = calculate_right_of_use_asset(liability, direct_costs, incentives)
-    df, _ = generate_amortization_schedule(start_date, payments, discount_rate / 100, term_months, rou_asset)
+        st.markdown("### 📒 Journal Entries (Expense-Only Treatment)")
+        expense_entries = [{
+            "Date": start_date + relativedelta(months=i),
+            "Account": "Dr Lease Expense",
+            "Amount": f"${payment:,.0f}"
+        } for i in range(term_months)] + [{
+            "Date": start_date + relativedelta(months=i),
+            "Account": "Cr Bank / Payables",
+            "Amount": f"${payment:,.0f}"
+        } for i in range(term_months)]
+        je_df = pd.DataFrame(expense_entries)
+        st.dataframe(je_df)
 
-    df["Interest (num)"] = df["Interest"].str.replace(",", "").astype(float)
-    df["Principal (num)"] = df["Principal"].str.replace(",", "").astype(float)
-    df["Depreciation (num)"] = df["Depreciation"].str.replace(",", "").astype(float)
-    df["Payment (num)"] = df["Payment"].str.replace(",", "").astype(float)
+        st.download_button(
+            label="⬇️ Download Journal Entries (CSV)",
+            data=je_df.to_csv(index=False),
+            file_name=f"{lease_name}_journal_entries_expensed.csv"
+        )
 
-    st.success("✅ Model generated successfully!")
-    # Tabs omitted here to fit response limit. Will continue in the next message.
-    tab1, tab2, tab3, tab4 = st.tabs(["📘 Disclosures", "📄 Descriptive Notes", "🧪 QA", "📒 Journal Entries"])
+        st.markdown("### 📄 Descriptive Notes (IFRS 16)")
+        st.text_area("59(d) – Practical expedients", "The entity has elected to apply IFRS 16 practical expedients for short-term or low-value leases, recognizing lease expense directly in profit or loss.")
+
+    else:
+        # Existing IFRS 16 logic
+        payments = generate_cpi_adjusted_payments(payment, term_months, cpi)
+        if residual_value > 0:
+            payments[-1] += residual_value
+
+        liability = calculate_lease_liability_from_payments(payments, discount_rate / 100)
+        rou_asset = calculate_right_of_use_asset(liability, direct_costs, incentives)
+        df, _ = generate_amortization_schedule(start_date, payments, discount_rate / 100, term_months, rou_asset)
+
+        df["Interest (num)"] = df["Interest"].str.replace(",", "").astype(float)
+        df["Principal (num)"] = df["Principal"].str.replace(",", "").astype(float)
+        df["Depreciation (num)"] = df["Depreciation"].str.replace(",", "").astype(float)
+        df["Payment (num)"] = df["Payment"].str.replace(",", "").astype(float)
+
+        st.success("✅ Model generated successfully!")
 
     # ---------------------- Tab 1: Disclosures ----------------------
 
