@@ -64,7 +64,7 @@ def calculate_lease_liability(
 
     periods = np.arange(1, len(payments) + 1) if payment_timing == "end" else np.arange(len(payments))
     discount_factors = 1 / ((1 + r) ** periods)
-    return round(np.dot(np.array(payments), discount_factors), 2)
+    return round(float(np.dot(np.array(payments), discount_factors)), 2)
 
 
 def generate_depreciation_schedule(
@@ -178,7 +178,7 @@ def calculate_lease_metrics(df: pd.DataFrame, reporting_date: date) -> Dict[str,
 
     def liability_maturity(df: pd.DataFrame, ref_date: date) -> Tuple[float, float]:
         one_year_later = ref_date + relativedelta(years=1)
-        mask = (df["Date"] > ref_date) & (df["Date"] <= one_year_later)
+        mask = (df["Date"] > pd.Timestamp(ref_date)) & (df["Date"] <= pd.Timestamp(one_year_later))
         current = df[mask]["Principal"].sum()
         non_current = df[df["Date"] > one_year_later]["Principal"].sum()
         return current, non_current
