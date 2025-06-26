@@ -23,8 +23,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
           pip install pandas-stubs types-python-dateutil types-cachetools types-colorama types-jsonschema types-openpyxl types-protobuf types-pycurl types-toml
+          pip install ruff
 
-      # === FIXERS ===
       - name: 🧹 Autoflake cleanup
         run: |
           autoflake --remove-all-unused-imports --remove-unused-variables \
@@ -43,7 +43,21 @@ jobs:
       - name: 🔂 Strip trailing whitespace
         run: find . -name "*.py" -exec sed -i 's/[ \t]*$//' {} +
 
-      # === CHECKERS ===
+      # === ADDITIONAL FIXERS ===
+      - name: 🤖 Ruff (style/type autofix)
+        run: ruff check . --fix
+
+      - name: 🛠 Fix Optional defaults (no-implicit-optional)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 📦 Install JS-based tools
+        run: npm install -g no-implicit-optional pyright
+
+      - name: 🧠 Apply no-implicit-optional
+        run: npx no-implicit-optional .
+
       - name: 🔍 Flake8 (lint)
         run: flake8 .
 
@@ -64,3 +78,7 @@ jobs:
         run: |
           coverage run -m pytest
           coverage report -m
+
+      # === FINAL TYPE INFERENCE CHECKER (OPTIONAL) ===
+      - name: 🔎 Pyright (static type inference)
+        run: pyright
