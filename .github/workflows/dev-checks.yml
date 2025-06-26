@@ -31,12 +31,12 @@ jobs:
       - name: 🔀 Isort (sort imports)
         run: isort .
 
-      - name: 🖤 Black (formatting)
-        run: black .
-
       - name: 🛠 Docformatter (auto-fix docstrings, skip broken files)
         run: |
           find . -name "*.py" -print0 | xargs -0 -n1 docformatter --in-place || echo "Some files skipped due to syntax errors"
+
+      - name: 🖤 Black (final formatting pass)
+        run: black .
 
       # === CHECKERS ===
       - name: 🔍 Flake8 (lint)
