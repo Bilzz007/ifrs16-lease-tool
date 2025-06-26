@@ -20,7 +20,7 @@ st.info("Use the sidebar to input lease details and generate IFRS 16 disclosures
 # ------------------------ Sidebar Inputs ------------------------
 with st.sidebar:
     st.header("Lease Inputs")
-    
+
     # Basic lease info
     lease_name = st.text_input("Lease Name", "Lease A")
     entity = st.text_input("Entity", "Entity A")
@@ -28,64 +28,44 @@ with st.sidebar:
     asset_class = st.selectbox("Asset Class", ["Building", "Equipment", "Vehicle", "Other"])
     reporting_date = st.date_input("📅 Reporting Date", value=date(2025, 12, 31))
 
-    # IFRS 16 Exemptions
+    # Exemptions
     st.subheader("IFRS 16 Exemptions")
     col1, col2 = st.columns(2)
     with col1:
-        low_value_lease = st.checkbox("Low-value Lease", help="Leases of low-value assets (≤ $5k USD) per IFRS 16.5")
+        low_value_lease = st.checkbox("Low-value Lease")
     with col2:
-        short_term_lease = st.checkbox("Short-term Lease", help="Leases with term ≤ 12 months per IFRS 16.6")
+        short_term_lease = st.checkbox("Short-term Lease")
 
-    # Always ask for lease term inputs before checking for exemptions
-st.subheader("Lease Terms")
-lease_mode = st.radio("Define Lease Term By:", ["Number of Periods", "Start and End Dates"])
+    # Always ask for term inputs
+    st.subheader("Lease Terms")
+    lease_mode = st.radio("Define Lease Term By:", ["Number of Periods", "Start and End Dates"])
 
-if lease_mode == "Number of Periods":
-    start_date = st.date_input("Lease Start Date", value=date.today())
-    unit = st.selectbox("Period Unit", ["Months", "Quarters", "Years"])
-    count = st.number_input("Number of Periods", 1, value=24)
-    term_months = count * {"Months": 1, "Quarters": 3, "Years": 12}[unit]
-    end_date = start_date + relativedelta(months=term_months)
-else:
-    start_date = st.date_input("Lease Start Date", value=date.today())
-    end_date = st.date_input("Lease End Date", value=start_date + relativedelta(months=24))
-    term_months = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month)
+    if lease_mode == "Number of Periods":
+        start_date = st.date_input("Lease Start Date", value=date.today())
+        unit = st.selectbox("Period Unit", ["Months", "Quarters", "Years"])
+        count = st.number_input("Number of Periods", 1, value=24)
+        term_months = count * {"Months": 1, "Quarters": 3, "Years": 12}[unit]
+        end_date = start_date + relativedelta(months=term_months)
+    else:
+        start_date = st.date_input("Lease Start Date", value=date.today())
+        end_date = st.date_input("Lease End Date", value=start_date + relativedelta(months=24))
+        term_months = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month)
 
-    if low_value_lease or short_term_lease:
-    st.success("✅ Lease qualifies for IFRS 16 exemption")
-    
-    with st.expander("Exemption Details"):
-        st.markdown(f"""
-        **Exemption Applied:**  
-        {'Low-value lease (IFRS 16.5)' if low_value_lease else 'Short-term lease (IFRS 16.6)'}
-        
-        **Accounting Treatment:**  
-        Lease payments are recognized as an expense on a straight-line basis over the lease term.
-        """)
-        
-        exempt_payments = pd.DataFrame({
-            "Period": range(1, term_months+1),
-            "Date": [start_date + relativedelta(months=i) for i in range(term_months)],
-            "Lease Expense": [payment] * term_months
-        })
-        st.dataframe(exempt_payments, hide_index=True)
-
-        # Financial terms
-        st.subheader("Financial Terms")
-        payment = st.number_input("Monthly Payment", min_value=0.0, value=10000.0)
-        discount_rate = st.slider("Discount Rate (%)", 0.0, 20.0, 6.0, 0.1)
-        direct_costs = st.number_input("Initial Direct Costs", 0.0, value=0.0)
-        incentives = st.number_input("Lease Incentives", 0.0, value=0.0)
-        residual_value = st.number_input("Guaranteed Residual Value", min_value=0.0, value=0.0,
-                                      help="Must be less than ROU asset value")
-        cpi = st.slider("Annual CPI Adjustment (%)", 0.0, 10.0, 0.0, 0.1)
+    # Always collect financial terms
+    st.subheader("Financial Terms")
+    payment = st.number_input("Monthly Payment", min_value=0.0, value=10000.0)
+    discount_rate = st.slider("Discount Rate (%)", 0.0, 20.0, 6.0, 0.1)
+    direct_costs = st.number_input("Initial Direct Costs", 0.0, value=0.0)
+    incentives = st.number_input("Lease Incentives", 0.0, value=0.0)
+    residual_value = st.number_input("Guaranteed Residual Value", min_value=0.0, value=0.0,
+                                     help="Must be less than ROU asset value")
+    cpi = st.slider("Annual CPI Adjustment (%)", 0.0, 10.0, 0.0, 0.1)
 
 # -------------------------- Generate Model --------------------------
 if st.sidebar.button("Generate Lease Model"):
     if low_value_lease or short_term_lease:
-        # Handle exempt leases
         st.success("✅ Lease qualifies for IFRS 16 exemption")
-        
+
         with st.expander("Exemption Details"):
             st.markdown(f"""
             **Exemption Applied:**  
@@ -94,15 +74,14 @@ if st.sidebar.button("Generate Lease Model"):
             **Accounting Treatment:**  
             Lease payments are recognized as an expense on a straight-line basis over the lease term.
             """)
-            
+
             exempt_payments = pd.DataFrame({
-                "Period": range(1, term_months+1),
+                "Period": range(1, term_months + 1),
                 "Date": [start_date + relativedelta(months=i) for i in range(term_months)],
                 "Lease Expense": [payment] * term_months
             })
             st.dataframe(exempt_payments, hide_index=True)
-            
-        # Generate exemption journal entries
+
         with st.expander("Journal Entries"):
             st.markdown("**Initial Recognition:** No ROU asset or liability recorded")
             st.markdown("**Monthly Entries:**")
