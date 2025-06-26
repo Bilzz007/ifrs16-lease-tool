@@ -23,7 +23,7 @@ def calculate_right_of_use_asset(
     incentives: float = 0,
     prepayments: float = 0
 ) -> float:
-    if any(x < 0 for x in [liability, direct_costs, incentives, prepayments]):
+    if any(float(x) < 0 for x in [liability, direct_costs, incentives, prepayments]):
         raise ValueError("All financial inputs must be non-negative")
     return round(liability + direct_costs - incentives + prepayments, 2)
 
@@ -64,7 +64,7 @@ def calculate_lease_liability(
 
     periods = np.arange(1, len(payments) + 1) if payment_timing == "end" else np.arange(len(payments))
     discount_factors = 1 / ((1 + r) ** periods)
-    return round(np.dot(payments, discount_factors), 2)
+    return round(np.dot(np.array(payments), discount_factors), 2)
 
 
 def generate_depreciation_schedule(
