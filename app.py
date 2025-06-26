@@ -123,7 +123,7 @@ if st.sidebar.button("Generate Lease Model"):
             for col in numeric_cols:
                 df[col+" (num)"] = df[col].str.replace(",", "").astype(float)
 
-            st.success("✅ Model generated successfully!")
+            st.success(" Model generated successfully!")
             
             # Display results in tabs
             tab1, tab2, tab3, tab4 = st.tabs(["📘 Disclosures", "📄 Notes", "🧪 QA", "📒 Journals"])
@@ -192,20 +192,21 @@ if st.sidebar.button("Generate Lease Model"):
                             "the lease term or the asset's useful life in accordance with IFRS 16.31.", height=100)
             
             with tab3:
-                st.subheader("Quality Assurance Checks")
-                
+                 st.subheader("Quality Assurance Checks")
+
                 # Liability check
                 liability_check = abs(df["Closing Liability (num)"].iloc[-1]) < 0.01
-                st.markdown(f"{"✅" if liability_check else "❌"} Liability amortizes to zero")
-                
+                st.markdown("Liability amortizes to zero: " + ("PASS" if liability_check else "FAIL"))
+
                 # ROU asset check
                 rou_check = abs(df["ROU Balance (num)"].iloc[-1]) < 0.01
-                st.markdown(f"{"✅" if rou_check else "❌"} ROU asset depreciates to zero")
-                
+                st.markdown("ROU asset depreciates to zero: " + ("PASS" if rou_check else "FAIL"))
+
                 # Straight-line check
                 depr_values = df["Depreciation (num)"][:-1]  # Exclude last period adjustment
                 straight_line_check = all(abs(d - depr_values.mean()) < 0.01 for d in depr_values)
-                st.markdown(f"{"✅" if straight_line_check else "❌"} Straight-line depreciation verified")
+                st.markdown("Straight-line depreciation verified: " + ("PASS" if straight_line_check else "FAIL"))
+
             
             with tab4:
                 st.subheader("Journal Entries")
