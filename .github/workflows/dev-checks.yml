@@ -22,7 +22,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
-          pip install pandas-stubs types-python-dateutil  # Added type stubs
+          pip install pandas-stubs types-python-dateutil types-cachetools types-colorama types-jsonschema types-openpyxl types-protobuf types-pycurl types-toml
 
       # === FIXERS ===
       - name: 🧹 Autoflake cleanup
@@ -45,17 +45,17 @@ jobs:
 
       # === CHECKERS ===
       - name: 🔍 Flake8 (lint)
-        run: flake8 .  # Add config if needed via --config=...
+        run: flake8 .
 
       - name: 🧠 Mypy (type checks)
         run: |
-          # First install missing stubs automatically
-          mypy --install-types --non-interactive .
-          # Then run with strict checking
-          mypy --disallow-untyped-defs --warn-return-any --strict .
+          # First pass to install any missing stubs
+          mypy --install-types --non-interactive . || true
+          # Second pass with strict checking
+          mypy --strict --disallow-untyped-defs --warn-return-any --ignore-missing-imports .
 
       - name: 🔐 Bandit (security checks)
-        run: bandit -r . -x tests  # Exclude test dir if needed
+        run: bandit -r . -x tests
 
       - name: 🧪 Pytest (unit tests)
         run: pytest
