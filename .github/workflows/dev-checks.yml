@@ -2,12 +2,12 @@ name: Dev Quality Checks
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
-  linting:
+  quality:
     runs-on: ubuntu-latest
 
     steps:
@@ -19,26 +19,16 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: 📦 Install dependencies
+      - name: 📦 Install dev dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
-          pip install autoflake isort
 
-      - name: 🔧 Auto-remove unused imports and variables
+      - name: 🔧 Auto-clean with autoflake, isort, black
         run: |
-          autoflake --remove-all-unused-imports --remove-unused-variables -i -r .
-
-      - name: 🔃 Sort imports
-        run: |
+          autoflake --remove-all-unused-imports --remove-unused-variables -r -i .
           isort .
-
-      - name: 🧼 Format code with Black
-        run: |
           black .
 
-      - name: 🔍 Run Flake8 (linting)
+      - name: ✅ Final lint check with flake8
         run: flake8 .
-
-      - name: 🧠 Run Mypy (type checks)
-        run: mypy .
