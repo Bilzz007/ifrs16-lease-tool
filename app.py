@@ -36,20 +36,39 @@ with st.sidebar:
     with col2:
         short_term_lease = st.checkbox("Short-term Lease", help="Leases with term ≤ 12 months per IFRS 16.6")
 
-    if not (low_value_lease or short_term_lease):
-        # Only show full lease inputs if not exempt
-        st.subheader("Lease Terms")
-        lease_mode = st.radio("Define Lease Term By:", ["Number of Periods", "Start and End Dates"])
+    # Always ask for lease term inputs before checking for exemptions
+st.subheader("Lease Terms")
+lease_mode = st.radio("Define Lease Term By:", ["Number of Periods", "Start and End Dates"])
+
+if lease_mode == "Number of Periods":
+    start_date = st.date_input("Lease Start Date", value=date.today())
+    unit = st.selectbox("Period Unit", ["Months", "Quarters", "Years"])
+    count = st.number_input("Number of Periods", 1, value=24)
+    term_months = count * {"Months": 1, "Quarters": 3, "Years": 12}[unit]
+    end_date = start_date + relativedelta(months=term_months)
+else:
+    start_date = st.date_input("Lease Start Date", value=date.today())
+    end_date = st.date_input("Lease End Date", value=start_date + relativedelta(months=24))
+    term_months = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month)
+
+    if low_value_lease or short_term_lease:
+    st.success("✅ Lease qualifies for IFRS 16 exemption")
+    
+    with st.expander("Exemption Details"):
+        st.markdown(f"""
+        **Exemption Applied:**  
+        {'Low-value lease (IFRS 16.5)' if low_value_lease else 'Short-term lease (IFRS 16.6)'}
         
-        if lease_mode == "Number of Periods":
-            start_date = st.date_input("Lease Start Date", value=date.today())
-            unit = st.selectbox("Period Unit", ["Months", "Quarters", "Years"])
-            count = st.number_input("Number of Periods", 1, value=24)
-            term_months = count * {"Months": 1, "Quarters": 3, "Years": 12}[unit]
-        else:
-            start_date = st.date_input("Lease Start Date", value=date.today())
-            end_date = st.date_input("Lease End Date", value=start_date + relativedelta(months=24))
-            term_months = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month)
+        **Accounting Treatment:**  
+        Lease payments are recognized as an expense on a straight-line basis over the lease term.
+        """)
+        
+        exempt_payments = pd.DataFrame({
+            "Period": range(1, term_months+1),
+            "Date": [start_date + relativedelta(months=i) for i in range(term_months)],
+            "Lease Expense": [payment] * term_months
+        })
+        st.dataframe(exempt_payments, hide_index=True)
 
         # Financial terms
         st.subheader("Financial Terms")
