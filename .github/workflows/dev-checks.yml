@@ -1,4 +1,4 @@
-name: Dev Quality Checks
+  name: Dev Quality Checks
 
 on:
   push:
@@ -33,8 +33,11 @@ jobs:
       - name: 🖤 Black (formatting)
         run: black .
 
-      - name: 📖 Docformatter (docstrings)
-        run: docformatter --in-place --recursive .
+      - name: 🔍 Check for docformatter errors
+        run: docformatter --recursive --check .
+
+      - name: 🛠 Auto-fix docstrings (best effort)
+        run: | docformatter --in-place --recursive . || true
 
       # === CHECKERS (run after fixers) ===
       - name: 🔍 Flake8 (lint)
