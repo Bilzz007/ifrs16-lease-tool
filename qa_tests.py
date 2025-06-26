@@ -40,8 +40,9 @@ def run_tests() -> None:
     payments = [1000.0] * 23 + [1500.0]
     liability = calculate_lease_liability(payments, 0.06)
     rou = calculate_right_of_use_asset(liability)
+    df = pd.DataFrame()
     df, _ = generate_lease_schedule(start, payments, 0.06, 24, rou)
-    last_payment: float = df.iloc[-1]["Payment"]
+    last_payment: float = float(df.iloc[-1]["Payment"])
     assert_close(last_payment, 1500.0, label="RVG included in final payment")
 
     # ---------------------- Test Case 4: Short-Term Lease (6 Months) ----------------------
@@ -49,16 +50,17 @@ def run_tests() -> None:
     payments = [2000.0] * short_term
     liability = calculate_lease_liability(payments, 0.04)
     rou = calculate_right_of_use_asset(liability)
+    df = pd.DataFrame()
     df, _ = generate_lease_schedule(start, payments, 0.04, short_term, rou)
     assert len(df) == 6, "Short-term lease should have 6 rows"
-    assert_close(df.iloc[-1]["Closing Liability"], 0.0, label="Short lease liability zero")
-    assert_close(df.iloc[-1]["ROU Balance"], 0.0, label="Short lease ROU zero")
+    assert_close(float(df.iloc[-1]["Closing Liability"]), 0.0, label="Short lease liability zero")
+    assert_close(float(df.iloc[-1]["ROU Balance"]), 0.0, label="Short lease ROU zero")
 
     # ---------------------- Test Case 5: Custom Reporting Date ----------------------
     reporting_date: date = date(2025, 6, 30)
     df["Date"] = pd.to_datetime(df["Date"])
-    ytd_dep: float = df[df["Date"] <= pd.to_datetime(reporting_date)]["Depreciation"].sum()
-    assert ytd_dep > 0, "Depreciation YTD must be non-zero for mid-year report"
+    ytd_dep: float = float(df[df["Date"] <= pd.to_datetime(reporting_date)]["Depreciation"].sum())
+    assert ytd_dep > 0.0, "Depreciation YTD must be non-zero for mid-year report"
 
     # ---------------------- Test Case 6: Zero Discount Rate ----------------------
     payments = [1000.0] * 12
@@ -73,6 +75,7 @@ def run_tests() -> None:
     # ---------------------- Test Case 8: Sum-of-Years Digits Depreciation ----------------------
     rou = 24000.0
     term = 6
+    df = pd.DataFrame()
     df, _ = generate_lease_schedule(
         start,
         [4000.0] * term,
@@ -84,6 +87,7 @@ def run_tests() -> None:
     assert abs(df["Depreciation"].sum() - rou) < 1, "SOYD should fully depreciate asset"
 
     # ---------------------- Test Case 9: Double-Declining Depreciation ----------------------
+    df = pd.DataFrame()
     df, _ = generate_lease_schedule(
         start,
         [4000.0] * term,
