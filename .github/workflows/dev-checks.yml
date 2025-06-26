@@ -27,7 +27,7 @@ jobs:
 
       - name: 🧼 Auto-clean with autoflake, isort, black
         run: |
-          autoflake --remove-all-unused-imports --remove-unused-variables -r -i .
+          autoflake --remove-all-unused-imports --remove-unused-variables --expand-star-imports -r -i 
           isort .
           black .
 
