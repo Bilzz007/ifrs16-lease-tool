@@ -24,11 +24,19 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
 
-      - name: 🔧 Auto-clean with autoflake, isort, black
+      - name: 🧼 Auto-clean with autoflake, isort, black
         run: |
           autoflake --remove-all-unused-imports --remove-unused-variables -r -i .
           isort .
           black .
 
-      - name: ✅ Final lint check with flake8
+      - name: ✅ Commit formatting fixes (if needed)
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git diff --cached --quiet || git commit -m "Auto-format code via CI"
+          git push || echo "No changes to push"
+
+      - name: 🔍 Final Lint Check with Flake8
         run: flake8 .
