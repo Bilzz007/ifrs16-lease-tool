@@ -49,10 +49,15 @@ cpi = st.sidebar.slider("Annual CPI (%)", 0.0, 10.0, 0.0)
 
 # -------------------------- Exemption Detection --------------------------
 
-LOW_VALUE_THRESHOLD = 5000
+LOW_VALUE_THRESHOLD = 5000  # Define low value threshold
 is_short_term = term_months <= 12 and residual_value == 0
 is_low_value = payment < LOW_VALUE_THRESHOLD and asset_class != 'Building'
 is_exempt = is_short_term or is_low_value
+
+# Optional: Show user what the app is detecting
+st.write("Short-term lease:", is_short_term)
+st.write("Low-value lease:", is_low_value)
+st.write("Is exempt from IFRS 16?", is_exempt)
 
 # -------------------------- Generate Model --------------------------
 
