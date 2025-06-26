@@ -23,9 +23,12 @@ def calculate_right_of_use_asset(
     incentives: float = 0,
     prepayments: float = 0
 ) -> float:
-    if any(float(x) < 0 for x in [liability, direct_costs, incentives, prepayments]):
+    # Explicit conversion to float before comparison
+    amounts = [float(liability), float(direct_costs), 
+               float(incentives), float(prepayments)]
+    if any(x < 0 for x in amounts):
         raise ValueError("All financial inputs must be non-negative")
-    return round(liability + direct_costs - incentives + prepayments, 2)
+    return round(sum(amounts), 2)
 
 
 def generate_variable_payments(
