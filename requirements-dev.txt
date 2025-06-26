@@ -1,11 +1,25 @@
-# Base dependencies (optional but helpful for dev tests)
+# === Base dependencies ===
 streamlit
 pandas
 python-dateutil
 
-# Dev tools
+# === Formatting & Linting ===
 black==24.4.2
 flake8==7.0.0
+isort
+autoflake
+docformatter
+pylint
+
+# === Type Checking ===
 mypy==1.10.0
-isort==5.13.2
-autoflake==2.3.1
+
+# === Testing ===
+pytest
+coverage
+
+# === Security Scanning ===
+bandit
+
+# === Git Hooks ===
+pre-commit
