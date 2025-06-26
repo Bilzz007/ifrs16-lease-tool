@@ -34,12 +34,8 @@ jobs:
       - name: 🖤 Black (formatting)
         run: black .
 
-      - name: 🔍 Check for docformatter errors
-        run: docformatter --recursive --check .
-
-      - name: 🛠 Auto-fix docstrings (best effort)
-        run: |
-          docformatter --in-place --recursive . || echo "Docformatter failed on some files but continued."
+      - name: 🛠 Docformatter (fix docstrings)
+        run: docformatter --in-place --recursive .
 
       # === CHECKERS ===
       - name: 🔍 Flake8 (lint)
