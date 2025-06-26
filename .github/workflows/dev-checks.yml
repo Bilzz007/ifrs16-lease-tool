@@ -23,29 +23,31 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
 
+      # === FIXERS (run first) ===
       - name: 🧹 Autoflake cleanup
         run: autoflake --remove-all-unused-imports --remove-unused-variables --expand-star-imports -r -i .
 
-      - name: 🔀 Isort (imports)
+      - name: 🔀 Isort (sort imports)
         run: isort .
 
-      - name: 🖤 Black (formatter)
+      - name: 🖤 Black (formatting)
         run: black .
 
+      - name: 📖 Docformatter (docstrings)
+        run: docformatter --in-place --recursive .
+
+      # === CHECKERS (run after fixers) ===
       - name: 🔍 Flake8 (lint)
         run: flake8 .
 
       - name: 🧠 Mypy (type checks)
         run: mypy .
 
-      - name: 📖 Docformatter (docstring format)
-        run: docformatter --in-place --recursive .
+      - name: 🔐 Bandit (security)
+        run: bandit -r .
 
       - name: 🧪 Pytest (unit tests)
         run: pytest
-
-      - name: 🔐 Bandit (security scan)
-        run: bandit -r .
 
       - name: 📊 Coverage (test coverage)
         run: |
