@@ -180,14 +180,9 @@ def calculate_lease_metrics(df: pd.DataFrame, reporting_date: date) -> Dict[str,
 
     def liability_maturity(df: pd.DataFrame, ref_date: date) -> Tuple[float, float]:
         one_year_later = ref_date + relativedelta(years=1)
-        ref_ts = pd.Timestamp(ref_date)
-        one_year_ts = pd.Timestamp(one_year_later)
-
-        date_col = pd.to_datetime(df["Date"])
-        mask = (date_col > ref_ts) & (date_col <= one_year_ts)
-
+        mask = (df["Date"] > pd.Timestamp(ref_date)) & (df["Date"] <= pd.Timestamp(one_year_later))
         current = df[mask]["Principal"].sum()
-        non_current = df[date_col > one_year_ts]["Principal"].sum()
+        non_current = df[df["Date"] > one_year_later]["Principal"].sum()
         return current, non_current
 
     cy_current, cy_noncurrent = liability_maturity(df, reporting_date)
