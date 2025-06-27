@@ -59,13 +59,14 @@ with st.sidebar:
 # -------------------------- Generate Model --------------------------
 if st.sidebar.button("Generate Lease Model"):
     if low_value_lease or short_term_lease:
-        st.success(" Lease qualifies for IFRS 16 exemption")
+        st.success("✔️ Lease qualifies for IFRS 16 exemption")
 
         with st.expander("Exemption Details"):
+            exemption_text = "Low-value lease (IFRS 16.5)" if low_value_lease else "Short-term lease (IFRS 16.6)"
             st.markdown(f"""
             **Exemption Applied:**  
-            {'Low-value lease (IFRS 16.5)' if low_value_lease else 'Short-term lease (IFRS 16.6)'}
-            
+            {exemption_text}
+
             **Accounting Treatment:**  
             Lease payments are recognized as an expense on a straight-line basis over the lease term.
             """)
@@ -79,7 +80,9 @@ if st.sidebar.button("Generate Lease Model"):
         with st.expander("Journal Entries"):
             st.markdown("**Initial Recognition:** No ROU asset or liability recorded")
             st.markdown("**Monthly Entries:**")
-            st.code("Dr Lease Expense      ${:,.2f}\nCr Cash/Bank          ${:,.2f}".format(payment, payment))
+            st.code(f"Dr Lease Expense      ${payment:,.2f}\nCr Cash/Bank          ${payment:,.2f}")
+
+        return  # 🔐 Stops further processing (no ROU or liability generated)
 
     else:
         try:
