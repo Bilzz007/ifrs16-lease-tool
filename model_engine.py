@@ -16,10 +16,21 @@ from journals_tab import display_journals
 
 def run_ifrs16_model(inputs: Dict):
     try:
+        # === Handle IFRS 16 Exemptions ===
+        if inputs["low_value_lease"]:
+            st.warning("Lease qualifies as a **Low-value Lease Exemption** under IFRS 16. No ROU or Lease Liability recognized.")
+            return
+
+        if inputs["short_term_lease"]:
+            st.warning("Lease qualifies as a **Short-term Lease Exemption** under IFRS 16. No ROU or Lease Liability recognized.")
+            return
+
+        # === Sanity Checks ===
         if inputs["residual_value"] >= inputs["payment"] * inputs["term_months"]:
             st.error("Residual value cannot exceed total lease payments")
             return
 
+        # === Payments & Schedules ===
         payments = generate_variable_payments(
             inputs["payment"],
             inputs["term_months"],
@@ -49,7 +60,7 @@ def run_ifrs16_model(inputs: Dict):
             residual_value=inputs["residual_value"]
         )
 
-        # Optional: rename for display
+        # === Clean & Format Data ===
         numeric_cols = [
             "Interest",
             "Principal",
@@ -65,16 +76,14 @@ def run_ifrs16_model(inputs: Dict):
             else:
                 df[col + " (num)"] = df[col]
 
-        # Rename columns for display (optional)
+        # Rename columns for display
         df.rename(columns=lambda col: col.replace("_", " "), inplace=True)
-
-        # Rename back specific columns expected by disclosures
         df.rename(columns={"ROU Balance": "ROU_Balance"}, inplace=True)
 
         st.success("Model generated successfully!")
 
+        # === Display Tabs ===
         tab1, tab2, tab3, tab4 = st.tabs(["Disclosures", "Notes", "QA", "Journals"])
-
         display_disclosures(tab1, df, pd.to_datetime(inputs["reporting_date"]))
         display_notes(tab2, df, payments)
         display_qa(tab3, df)
