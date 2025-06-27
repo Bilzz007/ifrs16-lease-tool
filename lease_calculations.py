@@ -96,18 +96,23 @@ def generate_depreciation_schedule(
     schedule = []
     cumulative_depr = 0.0
 
+    monthly_depr = 0.0
+    remaining_months = 0
+    sum_of_months = 0.0
+    depreciation_rate = 0.0
+
     if method == DepreciationMethod.STRAIGHT_LINE:
         monthly_depr = depreciable_amount / term_months
     elif method == DepreciationMethod.SUM_OF_YEARS:
-        total_months = term_months
-        sum_of_months = total_months * (total_months + 1) / 2
         remaining_months = term_months
+        sum_of_months = term_months * (term_months + 1) / 2
     elif method == DepreciationMethod.DOUBLE_DECLINING:
         straight_line_rate = 1 / term_months
         depreciation_rate = 2 * straight_line_rate
 
     for i in range(term_months):
         current_date = start_date + relativedelta(months=i)
+
         if method == DepreciationMethod.STRAIGHT_LINE:
             depr = monthly_depr
         elif method == DepreciationMethod.SUM_OF_YEARS:
