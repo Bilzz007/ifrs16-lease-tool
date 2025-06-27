@@ -11,13 +11,6 @@ def get_user_inputs():
         asset_class = st.selectbox("Asset Class", ["Building", "Equipment", "Vehicle", "Other"])
         reporting_date = st.date_input(" Reporting Date", value=date(2025, 12, 31))
 
-        st.subheader("IFRS 16 Exemptions")
-        col1, col2 = st.columns(2)
-        with col1:
-            low_value_lease = st.checkbox("Low-value Lease")
-        with col2:
-            short_term_lease = st.checkbox("Short-term Lease")
-
         st.subheader("Lease Terms")
         lease_mode = st.radio("Define Lease Term By:", ["Number of Periods", "Start and End Dates"])
 
@@ -39,6 +32,10 @@ def get_user_inputs():
         incentives = st.number_input("Lease Incentives", 0.0, value=0.0)
         residual_value = st.number_input("Guaranteed Residual Value", min_value=0.0, value=0.0)
         cpi = st.slider("Annual CPI Adjustment (%)", 0.0, 10.0, 0.0, 0.1)
+
+    # === Auto-detect exemptions ===
+    low_value_lease = payment < 5000
+    short_term_lease = term_months < 12
 
     return {
         "lease_name": lease_name,
