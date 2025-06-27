@@ -6,7 +6,7 @@ from lease_calculations import (
     generate_variable_payments,
     calculate_lease_liability,
     generate_lease_schedule,
-    calculate_lease_metrics
+    calculate_lease_metrics,
 )
 from disclosures_tab import display_disclosures
 from notes_tab import display_notes
@@ -29,11 +29,11 @@ def run_ifrs16_model(inputs: Dict):
         if inputs["residual_value"] > 0:
             payments[-1] += inputs["residual_value"]
 
-        liability = calculate_lease_liability(
-            payments, inputs["discount_rate"] / 100
-        )
+        liability = calculate_lease_liability(payments, inputs["discount_rate"] / 100)
         rou_asset = calculate_right_of_use_asset(
-            liability, inputs["direct_costs"], inputs["incentives"]
+            liability,
+            inputs["direct_costs"],
+            inputs["incentives"]
         )
 
         if inputs["residual_value"] >= rou_asset:
@@ -49,24 +49,33 @@ def run_ifrs16_model(inputs: Dict):
             residual_value=inputs["residual_value"]
         )
 
-        # Rename columns to match UI naming convention
-        df.rename(columns=lambda col: col.replace("_", " "), inplace=True)
-
-        # Convert numeric columns to float if needed
+        # Optional: rename for display
         numeric_cols = [
-            "Interest", "Principal", "Depreciation", "Payment",
-            "Closing Liability", "ROU Balance"
+            "Interest",
+            "Principal",
+            "Depreciation",
+            "Payment",
+            "Closing_Liability",
+            "ROU_Balance"
         ]
+
         for col in numeric_cols:
             if pd.api.types.is_string_dtype(df[col]):
                 df[col + " (num)"] = df[col].str.replace(",", "").astype(float)
             else:
                 df[col + " (num)"] = df[col]
 
+        # Rename columns for display (optional)
+        df.rename(columns=lambda col: col.replace("_", " "), inplace=True)
+
+        # Rename back specific columns expected by disclosures
+        df.rename(columns={"ROU Balance": "ROU_Balance"}, inplace=True)
+
         st.success("Model generated successfully!")
 
         tab1, tab2, tab3, tab4 = st.tabs(["Disclosures", "Notes", "QA", "Journals"])
-        display_disclosures(tab1, df, pd.to_datetime(inputs["reporting_date"]))  # FIXED: date type error
+
+        display_disclosures(tab1, df, pd.to_datetime(inputs["reporting_date"]))
         display_notes(tab2, df, payments)
         display_qa(tab3, df)
         display_journals(
