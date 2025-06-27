@@ -135,7 +135,6 @@ def generate_lease_schedule(
     depr_schedule = generate_depreciation_schedule(start_date, term_months, rou_asset, depreciation_method, residual_value)
 
     schedule: List[Dict[str, Union[int, float, date]]] = []
-    schedule = []
     remaining_liability = liability
 
     for i in range(term_months):
