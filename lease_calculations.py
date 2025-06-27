@@ -134,6 +134,7 @@ def generate_lease_schedule(
     interest_rate = discount_rate / 12
     depr_schedule = generate_depreciation_schedule(start_date, term_months, rou_asset, depreciation_method, residual_value)
 
+    schedule: List[Dict[str, Union[int, float, date]]] = []
     schedule = []
     remaining_liability = liability
 
@@ -161,7 +162,7 @@ def generate_lease_schedule(
         "initial_liability": liability,
         "rou_asset": rou_asset,
         "total_payments": sum(payments),
-        "total_interest": sum(float(item["Interest"]) for item in schedule),
+        "total_interest": sum(item["Interest"] for item in schedule),
         "effective_interest_rate": discount_rate,
         "depreciation_method": depreciation_method.value,
         "residual_value": residual_value,
