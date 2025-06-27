@@ -49,10 +49,14 @@ def run_ifrs16_model(inputs: Dict):
             residual_value=inputs["residual_value"]
         )
 
-        # Rename column headers to match UI display format
+        # Rename columns to match UI naming convention
         df.rename(columns=lambda col: col.replace("_", " "), inplace=True)
 
-        numeric_cols = ["Interest", "Principal", "Depreciation", "Payment", "Closing Liability", "ROU Balance"]
+        # Convert numeric columns to float if needed
+        numeric_cols = [
+            "Interest", "Principal", "Depreciation", "Payment",
+            "Closing Liability", "ROU Balance"
+        ]
         for col in numeric_cols:
             if pd.api.types.is_string_dtype(df[col]):
                 df[col + " (num)"] = df[col].str.replace(",", "").astype(float)
@@ -62,7 +66,7 @@ def run_ifrs16_model(inputs: Dict):
         st.success("Model generated successfully!")
 
         tab1, tab2, tab3, tab4 = st.tabs(["Disclosures", "Notes", "QA", "Journals"])
-        display_disclosures(tab1, df, inputs["reporting_date"])
+        display_disclosures(tab1, df, pd.to_datetime(inputs["reporting_date"]))  # FIXED: date type error
         display_notes(tab2, df, payments)
         display_qa(tab3, df)
         display_journals(
