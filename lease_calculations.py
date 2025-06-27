@@ -161,7 +161,7 @@ def generate_lease_schedule(
         "initial_liability": liability,
         "rou_asset": rou_asset,
         "total_payments": sum(payments),
-        "total_interest": sum(item["Interest"] for item in schedule),
+        "total_interest": sum(float(item["Interest"]) for item in schedule),
         "effective_interest_rate": discount_rate,
         "depreciation_method": depreciation_method.value,
         "residual_value": residual_value,
