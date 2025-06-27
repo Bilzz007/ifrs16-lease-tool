@@ -27,22 +27,20 @@ def get_user_inputs():
 
         st.subheader("Financial Terms")
         payment = st.number_input("Monthly Payment", min_value=0.0, value=10000.0)
-        
-        # Discount Rate: Input and Slider
-        discount_rate_input = st.number_input("Discount Rate (%)", min_value=0.0, max_value=20.0, value=6.0, step=0.1, key="discount_input")
-        discount_rate_slider = st.slider("Adjust Discount Rate", min_value=0.0, max_value=20.0, value=discount_rate_input, step=0.1, key="discount_slider")
-        discount_rate = discount_rate_slider if abs(discount_rate_slider - discount_rate_input) > 0.001 else discount_rate_input
+
+        st.number_input("Discount Rate (%)", min_value=0.0, max_value=20.0, step=0.1, key="discount_rate")
+        st.slider("Adjust Discount Rate", min_value=0.0, max_value=20.0, step=0.1, key="discount_rate")
+        discount_rate = st.session_state.discount_rate
 
         direct_costs = st.number_input("Initial Direct Costs", 0.0, value=0.0)
         incentives = st.number_input("Lease Incentives", 0.0, value=0.0)
         residual_value = st.number_input("Guaranteed Residual Value", min_value=0.0, value=0.0)
 
-        # CPI: Input and Slider
-        cpi_input = st.number_input("Annual CPI Adjustment (%)", min_value=0.0, max_value=10.0, value=0.0, step=0.1, key="cpi_input")
-        cpi_slider = st.slider("Adjust CPI", min_value=0.0, max_value=10.0, value=cpi_input, step=0.1, key="cpi_slider")
-        cpi = cpi_slider if abs(cpi_slider - cpi_input) > 0.001 else cpi_input
+        st.number_input("Annual CPI Adjustment (%)", min_value=0.0, max_value=10.0, step=0.1, key="cpi")
+        st.slider("Adjust CPI", min_value=0.0, max_value=10.0, step=0.1, key="cpi")
+        cpi = st.session_state.cpi
 
-    # Auto-detect IFRS 16 exemptions
+    # === Auto-detect exemptions ===
     low_value_lease = payment < 5000
     short_term_lease = term_months < 12
 
