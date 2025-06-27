@@ -16,33 +16,30 @@ from journals_tab import display_journals
 
 def run_ifrs16_model(inputs: Dict):
     try:
-        # Basic validation
         if inputs["residual_value"] >= inputs["payment"] * inputs["term_months"]:
             st.error("Residual value cannot exceed total lease payments")
             return
 
-        # Generate CPI-adjusted payments
         payments = generate_variable_payments(
-            base_payment=inputs["payment"],
-            term_months=inputs["term_months"],
+            inputs["payment"],
+            inputs["term_months"],
             annual_cpi_percent=inputs["cpi"]
         )
+
         if inputs["residual_value"] > 0:
             payments[-1] += inputs["residual_value"]
 
-        # Calculate liability and ROU asset
-        liability = calculate_lease_liability(payments, inputs["discount_rate"] / 100)
+        liability = calculate_lease_liability(
+            payments, inputs["discount_rate"] / 100
+        )
         rou_asset = calculate_right_of_use_asset(
-            liability,
-            direct_costs=inputs["direct_costs"],
-            incentives=inputs["incentives"]
+            liability, inputs["direct_costs"], inputs["incentives"]
         )
 
         if inputs["residual_value"] >= rou_asset:
             st.error("Residual value must be less than right-of-use asset value")
             return
 
-        # Generate amortization schedule
         df, _ = generate_lease_schedule(
             start_date=inputs["start_date"],
             payments=payments,
@@ -52,31 +49,30 @@ def run_ifrs16_model(inputs: Dict):
             residual_value=inputs["residual_value"]
         )
 
-        # Debug columns to detect issues
-        st.write("Columns generated in lease schedule:", df.columns.tolist())
+        # Rename column headers to match UI display format
+        df.rename(columns=lambda col: col.replace("_", " "), inplace=True)
 
-        # Ensure numeric columns
-        numeric_cols = [
-            "Interest", "Principal", "Depreciation",
-            "Payment", "Closing Liability", "ROU Balance"
-        ]
+        numeric_cols = ["Interest", "Principal", "Depreciation", "Payment", "Closing Liability", "ROU Balance"]
         for col in numeric_cols:
             if pd.api.types.is_string_dtype(df[col]):
                 df[col + " (num)"] = df[col].str.replace(",", "").astype(float)
             else:
                 df[col + " (num)"] = df[col]
 
-        # Success message
         st.success("Model generated successfully!")
 
-        # Tabs for outputs
         tab1, tab2, tab3, tab4 = st.tabs(["Disclosures", "Notes", "QA", "Journals"])
         display_disclosures(tab1, df, inputs["reporting_date"])
         display_notes(tab2, df, payments)
         display_qa(tab3, df)
         display_journals(
-            tab4, df, rou_asset, liability,
-            inputs["direct_costs"], inputs["incentives"], inputs["lease_name"]
+            tab4,
+            df,
+            rou_asset,
+            liability,
+            inputs["direct_costs"],
+            inputs["incentives"],
+            inputs["lease_name"]
         )
 
     except Exception as e:
