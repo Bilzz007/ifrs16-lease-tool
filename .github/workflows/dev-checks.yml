@@ -18,9 +18,10 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: 📦 Install dev dependencies
+      - name: 📦 Install base + dev dependencies
         run: |
           python -m pip install --upgrade pip
+          pip install -r requirements.txt
           pip install -r requirements-dev.txt
           pip install pandas-stubs types-python-dateutil types-cachetools types-colorama types-jsonschema types-openpyxl types-protobuf types-pycurl types-toml
           pip install ruff
