@@ -28,17 +28,25 @@ def get_user_inputs():
         st.subheader("Financial Terms")
         payment = st.number_input("Monthly Payment", min_value=0.0, value=10000.0)
 
-        st.number_input("Discount Rate (%)", min_value=0.0, max_value=20.0, step=0.1, key="discount_rate")
-        st.slider("Adjust Discount Rate", min_value=0.0, max_value=20.0, step=0.1, key="discount_rate")
-        discount_rate = st.session_state.discount_rate
+        # Discount Rate input and slider (sync logic)
+        col1, col2 = st.columns([2, 1])
+        with col1:
+            discount_input = st.number_input("Discount Rate (%)", min_value=0.0, max_value=20.0, step=0.1, value=6.0, key="discount_input")
+        with col2:
+            discount_slider = st.slider(" ", min_value=0.0, max_value=20.0, step=0.1, value=discount_input, key="discount_slider")
+        discount_rate = discount_slider if abs(discount_slider - discount_input) > 0.001 else discount_input
 
         direct_costs = st.number_input("Initial Direct Costs", 0.0, value=0.0)
         incentives = st.number_input("Lease Incentives", 0.0, value=0.0)
         residual_value = st.number_input("Guaranteed Residual Value", min_value=0.0, value=0.0)
 
-        st.number_input("Annual CPI Adjustment (%)", min_value=0.0, max_value=10.0, step=0.1, key="cpi")
-        st.slider("Adjust CPI", min_value=0.0, max_value=10.0, step=0.1, key="cpi")
-        cpi = st.session_state.cpi
+        # CPI input and slider (sync logic)
+        col3, col4 = st.columns([2, 1])
+        with col3:
+            cpi_input = st.number_input("Annual CPI Adjustment (%)", min_value=0.0, max_value=10.0, step=0.1, value=0.0, key="cpi_input")
+        with col4:
+            cpi_slider = st.slider("  ", min_value=0.0, max_value=10.0, step=0.1, value=cpi_input, key="cpi_slider")
+        cpi = cpi_slider if abs(cpi_slider - cpi_input) > 0.001 else cpi_input
 
     # === Auto-detect exemptions ===
     low_value_lease = payment < 5000
