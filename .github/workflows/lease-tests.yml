@@ -26,4 +26,4 @@ jobs:
           pip install pandas python-dateutil
 
       - name: 🧪 Run QA tests
-        run: python qa_tests.py
+        run: python test_lease_calculations.py
