@@ -44,7 +44,6 @@ jobs:
       - name: 🔂 Strip trailing whitespace
         run: find . -name "*.py" -exec sed -i 's/[ \t]*$//' {} +
 
-      # === ADDITIONAL FIXERS ===
       - name: 🤖 Ruff (style/type autofix)
         run: ruff check . --fix
 
@@ -56,9 +55,7 @@ jobs:
 
       - name: 🧠 Mypy (type checks)
         run: |
-          # First pass to install any missing stubs
           mypy --install-types --non-interactive . || true
-          # Second pass with strict checking
           mypy --strict --disallow-untyped-defs --warn-return-any --ignore-missing-imports .
 
       - name: 🔐 Bandit (security checks)
@@ -72,6 +69,8 @@ jobs:
           coverage run -m pytest
           coverage report -m
 
-      # === FINAL TYPE INFERENCE CHECKER (OPTIONAL) ===
+      - name: 📦 Install Pyright
+        run: npm install -g pyright
+
       - name: 🔎 Pyright (static type inference)
         run: pyright
