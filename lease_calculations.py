@@ -1,6 +1,6 @@
 from datetime import date
 from dateutil.relativedelta import relativedelta
-from typing import List, Tuple, Dict, Union
+from typing import List, Tuple, Dict, Union, TypedDict
 import pandas as pd
 import numpy as np
 from enum import Enum
@@ -15,6 +15,18 @@ class DepreciationMethod(Enum):
 class LeaseType(Enum):
     FINANCE = "finance"
     OPERATING = "operating"
+
+
+class LeaseRow(TypedDict):
+    Period: int
+    Date: date
+    Payment: float
+    Interest: float
+    Principal: float
+    Closing_Liability: float
+    Depreciation: float
+    ROU_Balance: float
+    Total_Expense: float
 
 
 def calculate_right_of_use_asset(
@@ -134,7 +146,7 @@ def generate_lease_schedule(
     interest_rate = discount_rate / 12
     depr_schedule = generate_depreciation_schedule(start_date, term_months, rou_asset, depreciation_method, residual_value)
 
-    schedule: List[Dict[str, Union[int, float, date]]] = []
+    schedule: List[LeaseRow] = []
     remaining_liability = liability
 
     for i in range(term_months):
@@ -151,10 +163,10 @@ def generate_lease_schedule(
             "Payment": payment,
             "Interest": interest,
             "Principal": principal,
-            "Closing Liability": remaining_liability,
+            "Closing_Liability": remaining_liability,
             "Depreciation": depr,
-            "ROU Balance": rou_balance,
-            "Total Expense": round(interest + depr, 2)
+            "ROU_Balance": rou_balance,
+            "Total_Expense": round(interest + depr, 2)
         })
 
     metrics: Dict[str, Union[float, str]] = {
@@ -196,7 +208,7 @@ def calculate_lease_metrics(df: pd.DataFrame, reporting_date: date) -> Dict[str,
             "principal_payments": float(cy_data["Principal"].sum()),
             "liability_current": cy_current,
             "liability_noncurrent": cy_noncurrent,
-            "rou_balance": float(cy_data.iloc[-1]["ROU Balance"]) if not cy_data.empty else 0.0
+            "rou_balance": float(cy_data.iloc[-1]["ROU_Balance"]) if not cy_data.empty else 0.0
         },
         "prior_year": {
             "depreciation": float(py_data["Depreciation"].sum()),
@@ -204,7 +216,7 @@ def calculate_lease_metrics(df: pd.DataFrame, reporting_date: date) -> Dict[str,
             "principal_payments": float(py_data["Principal"].sum()),
             "liability_current": py_current,
             "liability_noncurrent": py_noncurrent,
-            "rou_balance": float(py_data.iloc[-1]["ROU Balance"]) if not py_data.empty else 0.0
+            "rou_balance": float(py_data.iloc[-1]["ROU_Balance"]) if not py_data.empty else 0.0
         }
     }
 
@@ -219,8 +231,8 @@ def handle_lease_modification(
 ) -> pd.DataFrame:
     pre_mod = original_schedule[original_schedule["Date"] < modification_date]
 
-    remaining_liability = float(pre_mod.iloc[-1]["Closing Liability"]) if not pre_mod.empty else 0.0
-    remaining_rou = float(pre_mod.iloc[-1]["ROU Balance"]) if not pre_mod.empty else 0.0
+    remaining_liability = float(pre_mod.iloc[-1]["Closing_Liability"]) if not pre_mod.empty else 0.0
+    remaining_rou = float(pre_mod.iloc[-1]["ROU_Balance"]) if not pre_mod.empty else 0.0
 
     new_liability = calculate_lease_liability(new_payments, new_discount_rate)
     new_rou = calculate_right_of_use_asset(new_liability, new_direct_costs, new_incentives)
