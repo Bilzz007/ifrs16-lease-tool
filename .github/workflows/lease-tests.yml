@@ -21,9 +21,16 @@ jobs:
         with:
           python-version: 3.11
 
-      - name: 📦 Install dependencies
+      - name: 📦 Install base + dev dependencies
         run: |
-          pip install pandas python-dateutil
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
 
-      - name: 🧪 Run QA tests
-        run: python test_lease_calculations.py
+      - name: 🧪 Run lease model unit tests
+        run: pytest test_lease_calculations.py
+
+      - name: 📊 Show test coverage
+        run: |
+          coverage run -m pytest test_lease_calculations.py
+          coverage report -m
