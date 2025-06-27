@@ -49,8 +49,8 @@ def test_short_term_lease() -> None:
     df, _ = generate_lease_schedule(start, payments, 0.04, short_term, rou)
 
     assert len(df) == 6  # nosec B101
-    assert float(df.iloc[-1]["Closing Liability"]) == pytest.approx(0.0, abs=0.01)  # nosec B101
-    assert float(df.iloc[-1]["ROU Balance"]) == pytest.approx(0.0, abs=0.01)  # nosec B101
+    assert float(df.iloc[-1]["Closing_Liability"]) == pytest.approx(0.0, abs=0.01)  # nosec B101
+    assert float(df.iloc[-1]["ROU_Balance"]) == pytest.approx(0.0, abs=0.01)  # nosec B101
 
 
 def test_mid_year_reporting_depreciation() -> None:
