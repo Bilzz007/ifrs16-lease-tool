@@ -11,6 +11,7 @@ from lease_calculations import (
     generate_lease_schedule as generate_amortization_schedule,
     calculate_lease_metrics
 )
+from exemption_handler import handle_ifrs16_exemption
 
 # -------------------------- Streamlit UI --------------------------
 st.set_page_config("IFRS 16 Lease Model", layout="wide")
@@ -58,169 +59,151 @@ with st.sidebar:
 
 # -------------------------- Generate Model --------------------------
 if st.sidebar.button("Generate Lease Model"):
+
     if low_value_lease or short_term_lease:
-        st.success("✔️ Lease qualifies for IFRS 16 exemption")
+        handle_ifrs16_exemption(
+            start_date=start_date,
+            term_months=term_months,
+            payment=payment,
+            low_value_lease=low_value_lease,
+            short_term_lease=short_term_lease
+        )
+        st.stop()
 
-        with st.expander("Exemption Details"):
-            exemption_text = "Low-value lease (IFRS 16.5)" if low_value_lease else "Short-term lease (IFRS 16.6)"
-            st.markdown(f"""
-            **Exemption Applied:**  
-            {exemption_text}
+    try:
+        if residual_value >= payment * term_months:
+            st.error("Residual value cannot exceed total lease payments")
+            st.stop()
 
-            **Accounting Treatment:**  
-            Lease payments are recognized as an expense on a straight-line basis over the lease term.
-            """)
-            exempt_payments = pd.DataFrame({
-                "Period": range(1, term_months + 1),
-                "Date": [start_date + relativedelta(months=i) for i in range(term_months)],
-                "Lease Expense": [payment] * term_months
-            })
-            st.dataframe(exempt_payments, hide_index=True)
+        payments = generate_cpi_adjusted_payments(payment, term_months, annual_cpi_percent=cpi)
+        if residual_value > 0:
+            payments[-1] += residual_value
 
-        with st.expander("Journal Entries"):
-            st.markdown("**Initial Recognition:** No ROU asset or liability recorded")
-            st.markdown("**Monthly Entries:**")
-            st.code(f"Dr Lease Expense      ${payment:,.2f}\nCr Cash/Bank          ${payment:,.2f}")
+        liability = calculate_lease_liability_from_payments(payments, discount_rate / 100)
+        rou_asset = calculate_right_of_use_asset(liability, direct_costs, incentives)
 
-        return  # 🔐 Stops further processing (no ROU or liability generated)
+        if residual_value >= rou_asset:
+            st.error("Residual value must be less than right-of-use asset value")
+            st.stop()
 
-    else:
-        try:
-            if residual_value >= payment * term_months:
-                st.error("Residual value cannot exceed total lease payments")
-                st.stop()
+        df, _ = generate_amortization_schedule(
+            start_date=start_date,
+            payments=payments,
+            discount_rate=discount_rate / 100,
+            term_months=term_months,
+            rou_asset=rou_asset,
+            residual_value=residual_value
+        )
 
-            # FIXED: Correct argument for CPI
-            payments = generate_cpi_adjusted_payments(payment, term_months, annual_cpi_percent=cpi)
-            if residual_value > 0:
-                payments[-1] += residual_value
+        numeric_cols = ["Interest", "Principal", "Depreciation", "Payment", "Closing Liability", "ROU Balance"]
+        for col in numeric_cols:
+            if pd.api.types.is_string_dtype(df[col]):
+                df[col + " (num)"] = df[col].str.replace(",", "").astype(float)
+            else:
+                df[col + " (num)"] = df[col]
 
-            liability = calculate_lease_liability_from_payments(payments, discount_rate / 100)
-            rou_asset = calculate_right_of_use_asset(liability, direct_costs, incentives)
+        st.success(" Model generated successfully!")
 
-            if residual_value >= rou_asset:
-                st.error("Residual value must be less than right-of-use asset value")
-                st.stop()
+        tab1, tab2, tab3, tab4 = st.tabs([" Disclosures", " Notes", " QA", " Journals"])
 
-            df, _ = generate_amortization_schedule(
-                start_date=start_date,
-                payments=payments,
-                discount_rate=discount_rate / 100,
-                term_months=term_months,
-                rou_asset=rou_asset,
-                residual_value=residual_value
+        with tab1:
+            st.subheader("Financial Statement Disclosures")
+
+            metrics: Dict[str, Dict[str, float]] = calculate_lease_metrics(df, reporting_date)
+
+            st.markdown("#### Statement of Financial Position")
+            sofp_data = {
+                "Description": [
+                    "Right-of-use assets",
+                    "Lease liabilities - current",
+                    "Lease liabilities - non-current"
+                ],
+                f"{reporting_date.year}": [
+                    f"${metrics['current_year']['rou_balance']:,.0f}",
+                    f"${metrics['current_year']['liability_current']:,.0f}",
+                    f"${metrics['current_year']['liability_noncurrent']:,.0f}"
+                ]
+            }
+            if reporting_date.year - 1 in [d.year for d in df['Date']]:
+                sofp_data[f"{reporting_date.year-1}"] = [
+                    f"${metrics['prior_year']['rou_balance']:,.0f}",
+                    f"${metrics['prior_year']['liability_current']:,.0f}",
+                    f"${metrics['prior_year']['liability_noncurrent']:,.0f}"
+                ]
+            st.dataframe(pd.DataFrame(sofp_data), hide_index=True)
+
+            st.markdown("#### Statement of Comprehensive Income")
+            soci_data = {
+                "Description": ["Depreciation expense", "Interest expense"],
+                f"{reporting_date.year}": [
+                    f"${metrics['current_year']['depreciation']:,.0f}",
+                    f"${metrics['current_year']['interest']:,.0f}"
+                ]
+            }
+            if reporting_date.year - 1 in [d.year for d in df['Date']]:
+                soci_data[f"{reporting_date.year-1}"] = [
+                    f"${metrics['prior_year']['depreciation']:,.0f}",
+                    f"${metrics['prior_year']['interest']:,.0f}"
+                ]
+            st.dataframe(pd.DataFrame(soci_data), hide_index=True)
+
+            st.markdown("#### Amortization Schedule")
+            st.dataframe(df, hide_index=True, use_container_width=True)
+
+        with tab2:
+            st.subheader("Descriptive Disclosures")
+
+            st.text_area("59(a) - Leasing Activities", "The entity leases various assets including office space, vehicles, and equipment.", height=100)
+
+            st.text_area("59(b) - Future Cash Outflows",
+                         f"The entity has undiscounted lease payments totaling ${sum(payments):,.0f}.", height=100)
+
+            st.text_area("Depreciation Policy",
+                         "ROU assets are depreciated straight-line over the lease term in accordance with IFRS 16.31.", height=100)
+
+        with tab3:
+            st.subheader("Quality Assurance Checks")
+            liability_check = abs(df["Closing Liability (num)"].iloc[-1]) < 0.01
+            rou_check = abs(df["ROU Balance (num)"].iloc[-1]) < 0.01
+            depr_values = df["Depreciation (num)"][:-1]
+            straight_line_check = all(abs(d - depr_values.mean()) < 0.01 for d in depr_values)
+
+            st.markdown("Liability amortizes to zero: " + ("PASS" if liability_check else "FAIL"))
+            st.markdown("ROU asset depreciates to zero: " + ("PASS" if rou_check else "FAIL"))
+            st.markdown("Straight-line depreciation verified: " + ("PASS" if straight_line_check else "FAIL"))
+
+        with tab4:
+            st.subheader("Journal Entries")
+            st.markdown("#### Initial Recognition")
+            init_entries = [
+                {"Account": "Dr Right-of-use Asset", "Amount": f"${rou_asset:,.2f}"},
+                {"Account": "Cr Lease Liability", "Amount": f"${liability:,.2f}"}
+            ]
+            if direct_costs > 0:
+                init_entries.append({"Account": "Dr Initial Direct Costs", "Amount": f"${direct_costs:,.2f}"})
+            if incentives > 0:
+                init_entries.append({"Account": "Cr Lease Incentives Received", "Amount": f"${incentives:,.2f}"})
+            st.dataframe(pd.DataFrame(init_entries), hide_index=True)
+
+            st.markdown("#### Recurring Monthly Entries")
+            sample_entry = df.iloc[0]
+            st.code(
+                f"Dr Depreciation Expense    ${sample_entry['Depreciation (num)']:,.2f}\n"
+                f"Dr Interest Expense        ${sample_entry['Interest (num)']:,.2f}\n"
+                f"Cr Lease Liability         ${sample_entry['Principal (num)']:,.2f}\n"
+                f"Cr Cash/Bank               ${sample_entry['Payment (num)']:,.2f}"
             )
 
-            numeric_cols = ["Interest", "Principal", "Depreciation", "Payment", "Closing Liability", "ROU Balance"]
-            for col in numeric_cols:
-                if pd.api.types.is_string_dtype(df[col]):
-                    df[col + " (num)"] = df[col].str.replace(",", "").astype(float)
-                else:
-                    df[col + " (num)"] = df[col]
+            st.download_button(
+                label="Download Journal Entries (CSV)",
+                data=df.to_csv(index=False),
+                file_name=f"{lease_name}_journal_entries.csv",
+                mime="text/csv"
+            )
 
-            st.success(" Model generated successfully!")
-
-            tab1, tab2, tab3, tab4 = st.tabs([" Disclosures", " Notes", " QA", " Journals"])
-
-            with tab1:
-                st.subheader("Financial Statement Disclosures")
-
-                # FIXED: Annotated type for metrics
-                metrics: Dict[str, Dict[str, float]] = calculate_lease_metrics(df, reporting_date)
-
-                st.markdown("#### Statement of Financial Position")
-                sofp_data = {
-                    "Description": [
-                        "Right-of-use assets",
-                        "Lease liabilities - current",
-                        "Lease liabilities - non-current"
-                    ],
-                    f"{reporting_date.year}": [
-                        f"${metrics['current_year']['rou_balance']:,.0f}",
-                        f"${metrics['current_year']['liability_current']:,.0f}",
-                        f"${metrics['current_year']['liability_noncurrent']:,.0f}"
-                    ]
-                }
-                if reporting_date.year - 1 in [d.year for d in df['Date']]:
-                    sofp_data[f"{reporting_date.year-1}"] = [
-                        f"${metrics['prior_year']['rou_balance']:,.0f}",
-                        f"${metrics['prior_year']['liability_current']:,.0f}",
-                        f"${metrics['prior_year']['liability_noncurrent']:,.0f}"
-                    ]
-                st.dataframe(pd.DataFrame(sofp_data), hide_index=True)
-
-                st.markdown("#### Statement of Comprehensive Income")
-                soci_data = {
-                    "Description": ["Depreciation expense", "Interest expense"],
-                    f"{reporting_date.year}": [
-                        f"${metrics['current_year']['depreciation']:,.0f}",
-                        f"${metrics['current_year']['interest']:,.0f}"
-                    ]
-                }
-                if reporting_date.year - 1 in [d.year for d in df['Date']]:
-                    soci_data[f"{reporting_date.year-1}"] = [
-                        f"${metrics['prior_year']['depreciation']:,.0f}",
-                        f"${metrics['prior_year']['interest']:,.0f}"
-                    ]
-                st.dataframe(pd.DataFrame(soci_data), hide_index=True)
-
-                st.markdown("#### Amortization Schedule")
-                st.dataframe(df, hide_index=True, use_container_width=True)
-
-            with tab2:
-                st.subheader("Descriptive Disclosures")
-
-                st.text_area("59(a) - Leasing Activities", "The entity leases various assets including office space, vehicles, and equipment.", height=100)
-
-                st.text_area("59(b) - Future Cash Outflows",
-                             f"The entity has undiscounted lease payments totaling ${sum(payments):,.0f}.", height=100)
-
-                st.text_area("Depreciation Policy",
-                             "ROU assets are depreciated straight-line over the lease term in accordance with IFRS 16.31.", height=100)
-
-            with tab3:
-                st.subheader("Quality Assurance Checks")
-                liability_check = abs(df["Closing Liability (num)"].iloc[-1]) < 0.01
-                rou_check = abs(df["ROU Balance (num)"].iloc[-1]) < 0.01
-                depr_values = df["Depreciation (num)"][:-1]
-                straight_line_check = all(abs(d - depr_values.mean()) < 0.01 for d in depr_values)
-
-                st.markdown("Liability amortizes to zero: " + ("PASS" if liability_check else "FAIL"))
-                st.markdown("ROU asset depreciates to zero: " + ("PASS" if rou_check else "FAIL"))
-                st.markdown("Straight-line depreciation verified: " + ("PASS" if straight_line_check else "FAIL"))
-
-            with tab4:
-                st.subheader("Journal Entries")
-                st.markdown("#### Initial Recognition")
-                init_entries = [
-                    {"Account": "Dr Right-of-use Asset", "Amount": f"${rou_asset:,.2f}"},
-                    {"Account": "Cr Lease Liability", "Amount": f"${liability:,.2f}"}
-                ]
-                if direct_costs > 0:
-                    init_entries.append({"Account": "Dr Initial Direct Costs", "Amount": f"${direct_costs:,.2f}"})
-                if incentives > 0:
-                    init_entries.append({"Account": "Cr Lease Incentives Received", "Amount": f"${incentives:,.2f}"})
-                st.dataframe(pd.DataFrame(init_entries), hide_index=True)
-
-                st.markdown("#### Recurring Monthly Entries")
-                sample_entry = df.iloc[0]
-                st.code(
-                    f"Dr Depreciation Expense    ${sample_entry['Depreciation (num)']:,.2f}\n"
-                    f"Dr Interest Expense        ${sample_entry['Interest (num)']:,.2f}\n"
-                    f"Cr Lease Liability         ${sample_entry['Principal (num)']:,.2f}\n"
-                    f"Cr Cash/Bank               ${sample_entry['Payment (num)']:,.2f}"
-                )
-
-                st.download_button(
-                    label="Download Journal Entries (CSV)",
-                    data=df.to_csv(index=False),
-                    file_name=f"{lease_name}_journal_entries.csv",
-                    mime="text/csv"
-                )
-
-        except Exception as e:
-            st.error(f"Error generating lease model: {str(e)}")
-            st.stop()
+    except Exception as e:
+        st.error(f"Error generating lease model: {str(e)}")
+        st.stop()
 
 # -------------------------- Documentation --------------------------
 with st.expander(" IFRS 16 Reference"):
