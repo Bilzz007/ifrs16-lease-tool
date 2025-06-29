@@ -1,62 +1,61 @@
+# input_sidebar.py
+
 import streamlit as st
 from datetime import date
-from dateutil.relativedelta import relativedelta
 
 def get_user_inputs():
-    with st.sidebar:
-        st.header("Lease Inputs")
-        lease_name = st.text_input("Lease Name", "Lease A")
-        entity = st.text_input("Entity", "Entity A")
-        location = st.text_input("Location", "Main Office")
-        asset_class = st.selectbox("Asset Class", ["Building", "Equipment", "Vehicle", "Other"])
-        reporting_date = st.date_input("Reporting Date", value=date(2025, 12, 31))
+    st.header("Lease Details")
 
-        st.subheader("Lease Terms")
-        lease_mode = st.radio("Define Lease Term By:", ["Number of Periods", "Start and End Dates"])
+    with st.form("lease_input_form"):
+        # --- Basic Lease Details ---
+        lease_description = st.text_input("Lease Description", value="Office Rent")
+        start_date = st.date_input("Lease Start Date", value=date.today())
+        lease_term_months = st.number_input("Lease Term (months)", min_value=1, value=36)
+        payment_amount = st.number_input("Lease Payment Amount", min_value=0.0, value=10000.0, step=1.0)
+        payment_frequency = st.selectbox("Payment Frequency", ["Monthly", "Quarterly", "Annually"], index=0)
+        discount_rate = st.number_input("Discount Rate (%)", min_value=0.0, max_value=100.0, value=5.0, step=0.01)
+        initial_direct_costs = st.number_input("Initial Direct Costs", min_value=0.0, value=0.0, step=1.0)
+        lease_incentives = st.number_input("Lease Incentives", min_value=0.0, value=0.0, step=1.0)
+        prepayments = st.number_input("Prepayments", min_value=0.0, value=0.0, step=1.0)
+        cpi_escalation = st.checkbox("Is lease payment CPI/index-linked?", value=False)
+        cpi_rate = 0.0
+        if cpi_escalation:
+            cpi_rate = st.number_input("Expected Annual CPI/Index Increase (%)", min_value=0.0, value=3.0, step=0.01)
+        
+        # --- Exemption Handling ---
+        st.markdown("### Recognition Exemptions")
+        is_short_term = st.checkbox("Short-term lease exemption (< 12 months total)?", value=False)
+        is_low_value = st.checkbox("Low-value asset exemption?", value=False)
 
-        if lease_mode == "Number of Periods":
-            start_date = st.date_input("Lease Start Date", value=date.today())
-            unit = st.selectbox("Period Unit", ["Months", "Quarters", "Years"])
-            count = st.number_input("Number of Periods", 1, value=24)
-            term_months = count * {"Months": 1, "Quarters": 3, "Years": 12}[unit]
-            end_date = start_date + relativedelta(months=term_months)
-        else:
-            start_date = st.date_input("Lease Start Date", value=date.today())
-            end_date = st.date_input("Lease End Date", value=start_date + relativedelta(months=24))
-            term_months = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month)
+        # --- Lease Modification / Reassessment ---
+        st.markdown("---")
+        st.subheader("Lease Modification / Reassessment")
+        enable_modification = st.checkbox("Has a lease modification/reassessment event occurred?", value=False)
+        modification_inputs = {}
+        if enable_modification:
+            modification_inputs["effective_date"] = st.date_input("Modification Effective Date", value=date.today())
+            modification_inputs["new_lease_term_months"] = st.number_input("Revised Remaining Lease Term (months)", min_value=1, value=12)
+            modification_inputs["new_payment_amount"] = st.number_input("Revised Lease Payment Amount", min_value=0.0, value=payment_amount, step=0.01)
+            modification_inputs["new_discount_rate"] = st.number_input("Revised Discount Rate (%)", min_value=0.0, max_value=100.0, value=discount_rate, step=0.01)
+            modification_inputs["modification_reason"] = st.text_area("Modification Reason (for audit trail)", value="")
 
-        st.subheader("Financial Terms")
-        payment = st.number_input("Monthly Payment", min_value=0.0, value=10000.0)
+        submitted = st.form_submit_button("Submit")
 
-        # Only number input for Discount Rate (slider removed)
-        discount_rate = st.number_input("Discount Rate (%)", min_value=0.0, max_value=20.0, step=0.1, value=6.0)
-
-        direct_costs = st.number_input("Initial Direct Costs", 0.0, value=0.0)
-        incentives = st.number_input("Lease Incentives", 0.0, value=0.0)
-        residual_value = st.number_input("Guaranteed Residual Value", min_value=0.0, value=0.0)
-
-        # Only number input for CPI (slider removed)
-        cpi = st.number_input("Annual CPI Adjustment (%)", min_value=0.0, max_value=10.0, step=0.1, value=0.0)
-
-    # === Auto-detect exemptions ===
-    low_value_lease = payment < 5000
-    short_term_lease = term_months < 12
-
-    return {
-        "lease_name": lease_name,
-        "entity": entity,
-        "location": location,
-        "asset_class": asset_class,
-        "reporting_date": reporting_date,
-        "low_value_lease": low_value_lease,
-        "short_term_lease": short_term_lease,
+    # Bundle all lease inputs into a dictionary for easy use downstream
+    lease_inputs = {
+        "lease_description": lease_description,
         "start_date": start_date,
-        "end_date": end_date,
-        "term_months": term_months,
-        "payment": payment,
+        "lease_term_months": lease_term_months,
+        "payment_amount": payment_amount,
+        "payment_frequency": payment_frequency,
         "discount_rate": discount_rate,
-        "direct_costs": direct_costs,
-        "incentives": incentives,
-        "residual_value": residual_value,
-        "cpi": cpi,
+        "initial_direct_costs": initial_direct_costs,
+        "lease_incentives": lease_incentives,
+        "prepayments": prepayments,
+        "cpi_escalation": cpi_escalation,
+        "cpi_rate": cpi_rate,
+        "is_short_term": is_short_term,
+        "is_low_value": is_low_value,
     }
+
+    return submitted, lease_inputs, enable_modification, modification_inputs
