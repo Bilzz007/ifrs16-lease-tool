@@ -7,7 +7,7 @@ def get_user_inputs():
     st.header("Lease Details")
 
     with st.form("lease_input_form"):
-        # --- Basic Lease Details ---
+        # --- Main lease fields ---
         lease_description = st.text_input("Lease Description", value="Office Rent")
         start_date = st.date_input("Lease Start Date", value=date.today())
         lease_term_months = st.number_input("Lease Term (months)", min_value=1, value=36)
@@ -21,13 +21,13 @@ def get_user_inputs():
         cpi_rate = 0.0
         if cpi_escalation:
             cpi_rate = st.number_input("Expected Annual CPI/Index Increase (%)", min_value=0.0, value=3.0, step=0.01)
-        
-        # --- Exemption Handling ---
+
+        # --- Exemptions ---
         st.markdown("### Recognition Exemptions")
         is_short_term = st.checkbox("Short-term lease exemption (< 12 months total)?", value=False)
         is_low_value = st.checkbox("Low-value asset exemption?", value=False)
 
-        # --- Lease Modification / Reassessment ---
+        # --- Lease Modification / Reassessment section ---
         st.markdown("---")
         st.subheader("Lease Modification / Reassessment")
         enable_modification = st.checkbox("Has a lease modification/reassessment event occurred?", value=False)
@@ -41,7 +41,6 @@ def get_user_inputs():
 
         submitted = st.form_submit_button("Submit")
 
-    # Bundle all lease inputs into a dictionary for easy use downstream
     lease_inputs = {
         "lease_description": lease_description,
         "start_date": start_date,
