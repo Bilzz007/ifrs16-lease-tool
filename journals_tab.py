@@ -3,8 +3,18 @@
 import streamlit as st
 import pandas as pd
 
-def display_journals(tab, df, rou_asset, liability, direct_costs, incentives, lease_name,
-                     modification_inputs=None, pre_mod_schedule=None, post_mod_schedule=None):
+def display_journals(
+    tab,
+    df,
+    rou_asset,
+    liability,
+    direct_costs,
+    incentives,
+    lease_name,
+    modification_inputs=None,
+    pre_mod_schedule=None,
+    post_mod_schedule=None
+):
     with tab:
         st.subheader("Journal Entries")
 
@@ -36,7 +46,6 @@ def display_journals(tab, df, rou_asset, liability, direct_costs, incentives, le
             st.markdown("#### Modification / Reassessment Adjustment Entry")
 
             # Calculate adjustment at modification date
-            # (You can refine logic per your detailed business needs)
             mod_date = modification_inputs.get("effective_date")
             pre_last = pre_mod_schedule.iloc[-1] if not pre_mod_schedule.empty else None
             post_first = post_mod_schedule.iloc[0] if not post_mod_schedule.empty else None
