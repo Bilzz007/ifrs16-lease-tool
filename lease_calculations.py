@@ -234,6 +234,9 @@ def handle_lease_modification(
     starts new schedule with revised terms from that date, joins for a continuous table.
     Returns the full new schedule (pre + post mod) for reporting.
     """
+    # Ensure Date column is pandas datetime for robust comparison
+    original_schedule["Date"] = pd.to_datetime(original_schedule["Date"])
+
     # Schedules pre- and post-modification
     pre_mod = original_schedule[original_schedule["Date"] < pd.Timestamp(modification_date)]
 
@@ -275,4 +278,3 @@ def handle_lease_modification(
     # Combine for a full schedule
     combined = pd.concat([pre_mod_rows, new_schedule_rows], ignore_index=True)
     return combined
-
