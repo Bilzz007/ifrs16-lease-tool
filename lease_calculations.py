@@ -5,17 +5,14 @@ import pandas as pd
 import numpy as np
 from enum import Enum
 
-
 class DepreciationMethod(Enum):
     STRAIGHT_LINE = "straight_line"
     SUM_OF_YEARS = "sum_of_years"
     DOUBLE_DECLINING = "double_declining"
 
-
 class LeaseType(Enum):
     FINANCE = "finance"
     OPERATING = "operating"
-
 
 class LeaseRow(TypedDict):
     Period: int
@@ -28,7 +25,6 @@ class LeaseRow(TypedDict):
     ROU_Balance: float
     Total_Expense: float
 
-
 def calculate_right_of_use_asset(
     liability: float,
     direct_costs: float = 0,
@@ -39,7 +35,6 @@ def calculate_right_of_use_asset(
     if any(x < 0 for x in amounts):
         raise ValueError("All financial inputs must be non-negative")
     return round(liability + direct_costs - incentives + prepayments, 2)
-
 
 def generate_variable_payments(
     base_payment: float,
@@ -60,7 +55,6 @@ def generate_variable_payments(
         payments.append(round(payment, 2))
     return payments
 
-
 def calculate_lease_liability(
     payments: List[float],
     discount_rate: float,
@@ -78,7 +72,6 @@ def calculate_lease_liability(
     periods = np.arange(1, len(payments) + 1) if payment_timing == "end" else np.arange(len(payments))
     discount_factors = 1 / ((1 + r) ** periods)
     return round(float(np.dot(np.array(payments), discount_factors)), 2)
-
 
 def generate_depreciation_schedule(
     start_date: date,
@@ -134,7 +127,6 @@ def generate_depreciation_schedule(
 
     return schedule
 
-
 def generate_lease_schedule(
     start_date: date,
     payments: List[float],
@@ -186,7 +178,6 @@ def generate_lease_schedule(
 
     return pd.DataFrame(schedule), metrics
 
-
 def calculate_lease_metrics(df: pd.DataFrame, reporting_date: date) -> Dict[str, Dict[str, float]]:
     df["Date"] = pd.to_datetime(df["Date"])
 
@@ -225,30 +216,61 @@ def calculate_lease_metrics(df: pd.DataFrame, reporting_date: date) -> Dict[str,
         }
     }
 
-
 def handle_lease_modification(
     original_schedule: pd.DataFrame,
     modification_date: date,
     new_payments: List[float],
     new_discount_rate: float,
-    new_direct_costs: float = 0,
-    new_incentives: float = 0
+    rou_asset_remaining: float = None,
+    direct_costs: float = 0,
+    incentives: float = 0,
+    depreciation_method: DepreciationMethod = DepreciationMethod.STRAIGHT_LINE,
+    residual_value: float = 0
 ) -> pd.DataFrame:
-    pre_mod = original_schedule[original_schedule["Date"] < modification_date]
+    """
+    Handles IFRS 16 lease modification. Cuts original schedule at modification date,
+    starts new schedule with revised terms from that date, joins for a continuous table.
+    Returns the full new schedule (pre + post mod) for reporting.
+    """
+    # Schedules pre- and post-modification
+    pre_mod = original_schedule[original_schedule["Date"] < pd.Timestamp(modification_date)]
 
-    remaining_liability = float(pre_mod.iloc[-1]["Closing_Liability"]) if not pre_mod.empty else 0.0
-    remaining_rou = float(pre_mod.iloc[-1]["ROU_Balance"]) if not pre_mod.empty else 0.0
+    # Carrying values at modification date
+    if not pre_mod.empty:
+        last_row = pre_mod.iloc[-1]
+        opening_liability = float(last_row["Closing_Liability"])
+        opening_rou = rou_asset_remaining if rou_asset_remaining is not None else float(last_row["ROU_Balance"])
+    else:
+        opening_liability = 0.0
+        opening_rou = rou_asset_remaining if rou_asset_remaining is not None else 0.0
 
+    # New ROU for mod: liability (+ direct costs - incentives), as per IFRS 16
     new_liability = calculate_lease_liability(new_payments, new_discount_rate)
-    new_rou = calculate_right_of_use_asset(new_liability, new_direct_costs, new_incentives)
-    adjusted_rou = remaining_rou + new_rou
+    new_rou = calculate_right_of_use_asset(new_liability, direct_costs, incentives)
 
+    # For depreciation, IFRS 16 requires adjust ROU for any mod effect (no remeasurement if new lease)
+    rou_asset_for_new_schedule = opening_rou + (new_rou - opening_liability)  # Per IFRS 16 para 38
+
+    # Start date is modification date, term is new
     term_months = len(new_payments)
-    start_date = modification_date
-
     new_schedule, _ = generate_lease_schedule(
-        start_date, new_payments, new_discount_rate, term_months, new_rou
+        modification_date,
+        new_payments,
+        new_discount_rate,
+        term_months,
+        rou_asset_for_new_schedule,
+        depreciation_method,
+        residual_value
     )
 
-    combined_schedule = pd.concat([pre_mod, new_schedule]).reset_index(drop=True)
-    return combined_schedule
+    # Reset periods to continue after pre_mod
+    pre_mod_rows = pre_mod.copy()
+    new_schedule_rows = new_schedule.copy()
+    if not pre_mod_rows.empty:
+        last_period = pre_mod_rows["Period"].iloc[-1]
+        new_schedule_rows["Period"] = new_schedule_rows["Period"] + last_period
+
+    # Combine for a full schedule
+    combined = pd.concat([pre_mod_rows, new_schedule_rows], ignore_index=True)
+    return combined
+
